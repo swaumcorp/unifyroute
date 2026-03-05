@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────
-# run-tests.sh — LLMWAY Test Suite Runner
+# run-tests.sh — OPENROUTER Test Suite Runner
 #
 # Usage:
 #   ./run-tests.sh              # run all tests (unit + integration)
@@ -12,9 +12,9 @@
 #
 # Prerequisites:
 #   - For integration tests: API gateway must be running on http://localhost:6565
-#     (or override: LLMWAY_BASE_URL=http://host:port ./run-tests.sh)
+#     (or override: OPENROUTER_BASE_URL=http://host:port ./run-tests.sh)
 #   - .admin_token and .api_token files exist at the project root
-#     (created automatically by: ./llmway key and ./llmway key --admin)
+#     (created automatically by: ./openrouter key and ./openrouter key --admin)
 #
 # ──────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -26,12 +26,12 @@ VENV_PYTHON=".venv/bin/python"
 
 if [[ ! -f "$VENV_PYTHON" ]]; then
     echo "❌  Virtual environment not found at .venv/"
-    echo "    Run: ./llmway setup"
+    echo "    Run: ./openrouter setup"
     exit 1
 fi
 
 echo "──────────────────────────────────────────────────"
-echo " LLMWAY Test Suite"
+echo " OPENROUTER Test Suite"
 echo "──────────────────────────────────────────────────"
 
 # Parse our custom flags (strip them before passing to pytest)
@@ -75,7 +75,7 @@ run_integration() {
     # Check admin token
     if [[ ! -f ".admin_token" ]] && [[ -z "${ADMIN_TOKEN:-}" ]]; then
         echo "⚠️  No admin token found (.admin_token file or ADMIN_TOKEN env var)"
-        echo "   Create one with:  ./llmway key --admin"
+        echo "   Create one with:  ./openrouter key --admin"
         exit 1
     fi
 
@@ -83,7 +83,7 @@ run_integration() {
     if [[ ! -f ".api_token" ]] && [[ -z "${API_TOKEN:-}" ]]; then
         echo "ℹ️  No .api_token file found. Creating a temporary API token for tests..."
         ADMIN_TOKEN_VAL="${ADMIN_TOKEN:-$(cat .admin_token)}"
-        BASE="${LLMWAY_BASE_URL:-http://localhost:6565}"
+        BASE="${OPENROUTER_BASE_URL:-http://localhost:6565}"
 
         RESPONSE=$(curl -s -X POST "$BASE/api/admin/keys" \
             -H "Authorization: Bearer $ADMIN_TOKEN_VAL" \

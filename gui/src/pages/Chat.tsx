@@ -21,8 +21,8 @@ const MODEL_OPTIONS = [
     { value: "thinking", label: "Thinking tier" },
 ]
 
-const STORAGE_KEY = "llmway_chat_history"
-const SETTINGS_KEY = "llmway_chat_settings"
+const STORAGE_KEY = "openrouter_chat_history"
+const SETTINGS_KEY = "openrouter_chat_settings"
 
 function loadHistory(): DisplayMessage[] {
     try {
@@ -222,8 +222,8 @@ export function Chat() {
             <div className="flex-1 overflow-y-auto py-6 space-y-4">
                 {messages.length === 0 && !loading && (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-3">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500/10 to-rose-500/10 flex items-center justify-center">
-                            <Bot className="h-8 w-8 text-red-500/50" />
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-500/10 flex items-center justify-center">
+                            <Bot className="h-8 w-8 text-orange-500/50" />
                         </div>
                         <div>
                             <p className="font-medium text-slate-600 dark:text-slate-300">Start a conversation</p>
@@ -235,7 +235,7 @@ export function Chat() {
                 {messages.map((msg, i) => (
                     <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                         {msg.role === "assistant" && (
-                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 mt-0.5">
                                 <Bot className="h-4 w-4 text-white" />
                             </div>
                         )}
@@ -271,13 +271,13 @@ export function Chat() {
                 {/* Streaming text (live output) */}
                 {streamingText && (
                     <div className="flex gap-3 justify-start">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 mt-0.5">
                             <Bot className="h-4 w-4 text-white" />
                         </div>
                         <Card className="max-w-[70%] px-4 py-3 bg-white dark:bg-slate-950">
                             <div className="text-sm whitespace-pre-wrap leading-relaxed">
                                 {streamingText}
-                                <span className="inline-block w-2 h-4 bg-red-500 ml-0.5 animate-pulse rounded-sm" />
+                                <span className="inline-block w-2 h-4 bg-orange-500 ml-0.5 animate-pulse rounded-sm" />
                             </div>
                         </Card>
                     </div>
@@ -286,7 +286,7 @@ export function Chat() {
                 {/* Loading indicator (non-streaming) */}
                 {loading && !streamingText && (
                     <div className="flex gap-3 justify-start">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 mt-0.5">
                             <Bot className="h-4 w-4 text-white" />
                         </div>
                         <Card className="px-4 py-3 bg-white dark:bg-slate-950">
@@ -320,7 +320,7 @@ export function Chat() {
                         onClick={handleSend}
                         disabled={!input.trim() || loading}
                         size="icon"
-                        className="rounded-xl h-11 w-11 bg-red-600 hover:bg-red-700 text-white flex-shrink-0"
+                        className="rounded-xl h-11 w-11 bg-orange-600 hover:bg-orange-700 text-white flex-shrink-0"
                     >
                         <Send className="h-4 w-4" />
                     </Button>

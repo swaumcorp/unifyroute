@@ -1,4 +1,4 @@
-# Full provider catalog — mirrors LLMWAY's supported providers
+# Full provider catalog — mirrors OpenRouter's supported providers
 _PROVIDER_SEED = [
     # ── OAuth / subscription providers ──────────────────────────────────────
     # Google Antigravity: uses gemini-cli PKCE credentials, no user config needed

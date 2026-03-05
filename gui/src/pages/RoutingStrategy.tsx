@@ -208,7 +208,7 @@ Rules:
             <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Brain className="h-5 w-5 text-red-500" />
+                        <Brain className="h-5 w-5 text-orange-500" />
                         Generate Routing Strategy
                         {tier && (
                             <Badge className={`${tier.bgColor} ${tier.color} border ${tier.borderColor} ml-1`}>
@@ -312,7 +312,7 @@ Rules:
                     <Button
                         onClick={handleInsert}
                         disabled={!generatedYaml.trim() || generating}
-                        className="bg-red-500 hover:bg-red-600 text-white"
+                        className="bg-orange-500 hover:bg-orange-600 text-white"
                     >
                         <CheckCircle2 className="h-4 w-4 mr-1.5" />
                         Insert into Editor
@@ -441,7 +441,7 @@ export function RoutingStrategy() {
                     <h2 className="text-3xl font-bold tracking-tight">Routing Strategy</h2>
                     <p className="text-muted-foreground pt-1">
                         Configure tier aliases and routing strategies. Use the{" "}
-                        <Brain className="inline h-4 w-4 text-red-500 -mt-0.5" />{" "}
+                        <Brain className="inline h-4 w-4 text-orange-500 -mt-0.5" />{" "}
                         <strong>Brain</strong> button on any tier to auto-generate a strategy with AI.
                     </p>
                 </div>

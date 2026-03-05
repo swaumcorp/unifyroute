@@ -73,7 +73,7 @@
 
 ### 1.7 Infrastructure
 - [x] Docker Compose — PostgreSQL 16 + Redis 7 (data stores only)
-- [x] `llmway` launcher script (CLI entrypoint)
+- [x] `openrouter` launcher script (CLI entrypoint)
 - [x] Setup script (`scripts/setup.sh`)
 - [x] Admin key creation script (`scripts/create-key.py`)
 - [x] Cleanup script (`scripts/cleanup.sh`)

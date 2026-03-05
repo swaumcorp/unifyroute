@@ -33,15 +33,15 @@ function HealthBadge({ health }: { health: BrainProvider["health"] }) {
 function ScoreBadge({ score }: { score: number }) {
     const pct = Math.round(score * 100)
     const color = pct >= 70 ? "bg-emerald-500 hover:bg-emerald-600" :
-        pct >= 40 ? "bg-amber-500 hover:bg-amber-600" : "bg-rose-500 hover:bg-rose-600"
+        pct >= 40 ? "bg-amber-500 hover:bg-amber-600" : "bg-orange-500 hover:bg-orange-600"
     return <Badge className={`${color} font-mono`}>{pct}%</Badge>
 }
 
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle: string }) {
     return (
         <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 rounded-lg bg-red-50 dark:bg-red-500/10">
-                <Icon className="h-5 w-5 text-red-500" />
+            <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-500/10">
+                <Icon className="h-5 w-5 text-orange-500" />
             </div>
             <div>
                 <h3 className="font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
@@ -636,8 +636,8 @@ export function BrainPage() {
         <div className="p-8 space-y-8">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-red-200 dark:border-red-800">
-                    <Brain className="h-7 w-7 text-red-500" />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/20 border border-orange-200 dark:border-orange-800">
+                    <Brain className="h-7 w-7 text-orange-500" />
                 </div>
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">Brain</h2>
@@ -654,7 +654,7 @@ export function BrainPage() {
                         key={t.id}
                         onClick={() => setTab(t.id)}
                         className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t.id
-                            ? "border-red-500 text-red-600 dark:text-red-400"
+                            ? "border-orange-500 text-orange-600 dark:text-orange-400"
                             : "border-transparent text-muted-foreground hover:text-foreground hover:border-slate-300"
                             }`}
                     >

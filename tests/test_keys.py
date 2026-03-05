@@ -66,7 +66,7 @@ class TestKeyCreate:
         key_id = r.json()["id"]
 
         import os
-        base_url = os.environ.get("LLMWAY_BASE_URL", "http://localhost:6565")
+        base_url = os.environ.get("OPENROUTER_BASE_URL", "http://localhost:6565")
         with _httpx.Client(base_url=base_url, headers={"Authorization": f"Bearer {token}"}) as c:
             check = c.get("/api/v1/models")
             assert check.status_code == 200
@@ -103,7 +103,7 @@ class TestKeyDelete:
         kid = r.json()["id"]
         admin_client.delete(f"/api/admin/keys/{kid}")
 
-        base_url = os.environ.get("LLMWAY_BASE_URL", "http://localhost:6565")
+        base_url = os.environ.get("OPENROUTER_BASE_URL", "http://localhost:6565")
         with _httpx.Client(base_url=base_url, headers={"Authorization": f"Bearer {token}"}) as c:
             check = c.get("/api/v1/models")
             assert check.status_code == 401

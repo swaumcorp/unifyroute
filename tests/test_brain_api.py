@@ -1,6 +1,6 @@
 """Integration tests for Brain API endpoints.
 
-Requires a running API gateway at LLMWAY_BASE_URL (default: http://localhost:6565)
+Requires a running API gateway at OPENROUTER_BASE_URL (default: http://localhost:6565)
 and a valid ADMIN_TOKEN.
 """
 import pytest

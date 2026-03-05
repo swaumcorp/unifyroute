@@ -6,7 +6,7 @@ Complete reference for all CLI scripts, API endpoints, admin tasks, and operatio
 
 ## Table of Contents
 
-1. [llmway CLI](#llmway-cli)
+1. [openrouter CLI](#openrouter-cli)
 2. [Script Reference](#script-reference)
 3. [Database Migrations](#database-migrations)
 4. [API Endpoints](#api-endpoints)
@@ -19,20 +19,20 @@ Complete reference for all CLI scripts, API endpoints, admin tasks, and operatio
 
 ---
 
-## llmway CLI
+## openrouter CLI
 
-The `llmway` launcher script is the main entrypoint. Run it from the project root.
+The `openrouter` launcher script is the main entrypoint. Run it from the project root.
 
 ```bash
-./llmway <command>
+./openrouter <command>
 ```
 
 | Command | Description |
 |---------|-------------|
-| `./llmway setup` | Full one-time setup (deps, DB migrations, admin key) |
-| `./llmway start` | Start the gateway (sources `.env`, starts uvicorn) |
+| `./openrouter setup` | Full one-time setup (deps, DB migrations, admin key) |
+| `./openrouter start` | Start the gateway (sources `.env`, starts uvicorn) |
 
-### `./llmway setup`
+### `./openrouter setup`
 
 Runs `scripts/setup.sh`:
 - Starts Docker containers (postgres + redis)
@@ -42,12 +42,12 @@ Runs `scripts/setup.sh`:
 - Creates an initial admin `sk-...` key
 
 ```bash
-./llmway setup
+./openrouter setup
 ```
 
 Expected output:
 ```
-🚀 Starting LLMWAY Setup...
+🚀 Starting OPENROUTER Setup...
 🐳 Starting Docker containers...
 📦 1. Setting up Backend Environment...
 🌐 2. Building Frontend Application...
@@ -60,12 +60,12 @@ sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ⚠️ SAVE THIS TOKEN NOW
 ```
 
-### `./llmway start`
+### `./openrouter start`
 
 Runs `scripts/start-gateway.sh` — sources `.env` and starts the unified launcher:
 
 ```bash
-./llmway start
+./openrouter start
 ```
 
 The gateway listens on `http://HOST:PORT` (default `http://0.0.0.0:<app_port>`).
@@ -432,7 +432,7 @@ from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:<app_port>/api/v1",
-    api_key="sk-your-llmway-gateway-key"
+    api_key="sk-your-openrouter-gateway-key"
 )
 
 response = client.chat.completions.create(
@@ -449,7 +449,7 @@ import OpenAI from 'openai';
 
 const client = new OpenAI({
   baseURL: 'http://localhost:<app_port>/api/v1',
-  apiKey: 'sk-your-llmway-gateway-key',
+  apiKey: 'sk-your-openrouter-gateway-key',
 });
 
 const response = await client.chat.completions.create({
@@ -516,7 +516,7 @@ docker compose up -d
 
 # Run a one-off command in a service
 docker compose exec api-gateway bash
-docker compose exec postgres psql -U postgres -d llmway
+docker compose exec postgres psql -U postgres -d openrouter
 ```
 
 ---
@@ -604,7 +604,7 @@ curl "http://localhost:<app_port>/admin/logs/stats?hours=24" \
 
 ### Export Logs to CSV
 
-From the **Request Logs** page in the dashboard, apply filters then click **Export CSV**. The file is named `llmway-logs-YYYY-MM-DD.csv`.
+From the **Request Logs** page in the dashboard, apply filters then click **Export CSV**. The file is named `openrouter-logs-YYYY-MM-DD.csv`.
 
 ### Check Provider Costs
 
@@ -626,5 +626,5 @@ docker compose ps
 ### systemd Service Logs
 
 ```bash
-sudo journalctl -u llmway -f -n 100
+sudo journalctl -u openrouter -f -n 100
 ```

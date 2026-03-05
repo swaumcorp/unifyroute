@@ -13,7 +13,7 @@ class TestConnectionSecurity:
         token = r_create.json()["token"]
         key_id = r_create.json()["id"]
 
-        base_url = os.environ.get("LLMWAY_BASE_URL", "http://localhost:6565")
+        base_url = os.environ.get("OPENROUTER_BASE_URL", "http://localhost:6565")
         with httpx.Client(base_url=base_url, headers={"Authorization": f"Bearer {token}"}) as api_client:
             res = api_client.get("/api/v1/models")
             assert res.status_code == 200
@@ -33,13 +33,13 @@ class TestConnectionSecurity:
         # delete it immediately
         admin_client.delete(f"/api/admin/keys/{key_id}")
 
-        base_url = os.environ.get("LLMWAY_BASE_URL", "http://localhost:6565")
+        base_url = os.environ.get("OPENROUTER_BASE_URL", "http://localhost:6565")
         with httpx.Client(base_url=base_url, headers={"Authorization": f"Bearer {token}"}) as api_client:
             res = api_client.get("/api/v1/models")
             assert res.status_code == 401
             
     def test_cors_rejects_unknown_origin(self):
-        base_url = os.environ.get("LLMWAY_BASE_URL", "http://localhost:6565")
+        base_url = os.environ.get("OPENROUTER_BASE_URL", "http://localhost:6565")
         with httpx.Client(base_url=base_url) as client:
             res = client.options(
                 "/api/v1/models",

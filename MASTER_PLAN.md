@@ -95,7 +95,7 @@ A new guided onboarding wizard added as a dedicated module. Components:
 - **`api-gateway/src/api_gateway/routes/wizard.py`** — 3 new REST endpoints (`GET /admin/wizard/providers/available`, `GET /admin/wizard/models/{name}`, `POST /admin/wizard/onboard`).
 - **`api-gateway/src/api_gateway/routes/model_catalog.py`** — Static catalog of popular models for 12 providers (OpenAI, Anthropic, Google, Groq, OpenRouter, Mistral, DeepSeek, xAI, Together, Fireworks, Cerebras, Perplexity).
 - **`scripts/wizard.py`** — Interactive terminal wizard (color ANSI UI, HTTP calls to gateway).
-- **`llmway wizard`** — New CLI command delegating to `scripts/wizard.py`.
+- **`openrouter wizard`** — New CLI command delegating to `scripts/wizard.py`.
 - **`gui/src/pages/SetupWizard.tsx`** — 6-step wizard GUI page (Provider → Credentials → Models → Routing → Brain → Summary).
 - **`gui/src/lib/wizard.ts`** — TypeScript API helpers for wizard endpoints.
 - **`tests/test_wizard_api.py`** — Integration tests for all 3 wizard endpoints.

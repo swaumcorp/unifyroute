@@ -176,7 +176,7 @@ function BrainPanel({
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Brain className="h-5 w-5 text-red-500" />
+                        <Brain className="h-5 w-5 text-orange-500" />
                         Ask Brain
                     </DialogTitle>
                 </DialogHeader>
@@ -206,7 +206,7 @@ function BrainPanel({
                         <Button
                             onClick={handleGenerate}
                             disabled={!prompt.trim()}
-                            className="bg-red-500 hover:bg-red-600 text-white gap-2 self-end"
+                            className="bg-orange-500 hover:bg-orange-600 text-white gap-2 self-end"
                         >
                             <Sparkles className="h-4 w-4" />
                             Suggest
@@ -244,7 +244,7 @@ function BrainPanel({
                                                 key={s.modelDbId}
                                                 className={`flex items-center gap-3 px-3 py-2 text-sm ${s.action === "enable"
                                                     ? "bg-emerald-50/50 dark:bg-emerald-900/10"
-                                                    : "bg-rose-50/50 dark:bg-rose-900/10"
+                                                    : "bg-orange-50/50 dark:bg-orange-900/10"
                                                     }`}
                                             >
                                                 {s.action === "enable"
@@ -573,7 +573,7 @@ export function ModelManagement() {
                         className="gap-2"
                         onClick={() => setBrainOpen(true)}
                     >
-                        <Brain className="h-4 w-4 text-red-500" />
+                        <Brain className="h-4 w-4 text-orange-500" />
                         Ask Brain
                     </Button>
                     <Button className="gap-2" onClick={() => setAddOpen(true)}>

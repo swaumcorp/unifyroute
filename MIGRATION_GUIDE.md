@@ -22,9 +22,9 @@ This rebranded version includes several key modifications from the original LLMW
 - **No Bash Dependency**: The startup process no longer relies on bash scripts on non-Unix systems
 
 ### 3. Rebranding
-- **Project Name**: Changed from "LLMWAY" to "UnifyRoute"
-- **CLI Tool**: Now use `./unifyroute` instead of `./llmway`
-- **Docker Containers**: Container names updated (e.g., `unifyroute_api_gateway` instead of `llmway_api_gateway`)
+- **Project Name**: Changed from "OPENROUTER" to "UnifyRoute"
+- **CLI Tool**: Now use `./unifyroute` instead of `./openrouter`
+- **Docker Containers**: Container names updated (e.g., `unifyroute_api_gateway` instead of `openrouter_api_gateway`)
 - **Configuration**: Environment variables and file paths updated throughout
 
 ## Quick Start
@@ -196,8 +196,8 @@ If you're migrating from the original LLMWay project:
 
 1. **Database**: Back up your PostgreSQL database if you have production data
 2. **Configuration**: Update your `.env` file to use `SQLITE_PATH` instead of `DATABASE_URL`
-3. **CLI Commands**: Replace `./llmway` with `./unifyroute` in all scripts
-4. **Docker Services**: Update docker-compose references from `llmway_*` to `unifyroute_*`
+3. **CLI Commands**: Replace `./openrouter` with `./unifyroute` in all scripts
+4. **Docker Services**: Update docker-compose references from `openrouter_*` to `unifyroute_*`
 5. **Documentation**: Review updated docs in the `docs/` folder
 
 ## Support & Documentation

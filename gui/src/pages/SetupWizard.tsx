@@ -142,7 +142,7 @@ function ProviderStep({
         </div>
     )
     if (error) return (
-        <div className="flex items-center gap-3 text-red-500 bg-red-50 dark:bg-red-500/10 p-4 rounded-xl">
+        <div className="flex items-center gap-3 text-orange-500 bg-orange-50 dark:bg-orange-500/10 p-4 rounded-xl">
             <AlertCircle size={20} />
             <p className="text-sm">{error}</p>
         </div>
@@ -238,7 +238,7 @@ function CredentialForm({ cred, onChange, onRemove }: {
                     </div>
                 </div>
             </div>
-            <button onClick={onRemove} className="mt-6 text-red-400 hover:text-red-600 transition-colors">
+            <button onClick={onRemove} className="mt-6 text-orange-400 hover:text-orange-600 transition-colors">
                 <Trash2 size={16} />
             </button>
         </div>
@@ -471,7 +471,7 @@ function ModelsStep({ providerStates, onUpdateModels }: {
                                 </Select>
                                 <button
                                     onClick={() => onUpdateModels(ps.provider.name, ps.models.filter(x => x !== m))}
-                                    className="text-red-400 hover:text-red-600"
+                                    className="text-orange-400 hover:text-orange-600"
                                 >
                                     <Trash2 size={16} />
                                 </button>
@@ -965,7 +965,7 @@ export function SetupWizard() {
                 </Button>
                 <div className="flex items-center gap-3">
                     {saveError && (
-                        <p className="text-sm text-red-500 flex items-center gap-1">
+                        <p className="text-sm text-orange-500 flex items-center gap-1">
                             <AlertCircle size={14} /> {saveError}
                         </p>
                     )}

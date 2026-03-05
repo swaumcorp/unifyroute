@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide walks you through setting up **LLMWAY** from scratch on a Linux or macOS machine for both local development and production deployment.
+This guide walks you through setting up **OPENROUTER** from scratch on a Linux or macOS machine for both local development and production deployment.
 
 ---
 
@@ -24,8 +24,8 @@ This guide walks you through setting up **LLMWAY** from scratch on a Linux or ma
 ## Step 1 — Clone the Repository
 
 ```bash
-git clone <repo-url> llmway
-cd llmway
+git clone <repo-url> openrouter
+cd openrouter
 ```
 
 ---
@@ -40,7 +40,7 @@ Edit `.env` with your values:
 
 ```ini
 # Required
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/llmway
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5433/openrouter
 VAULT_MASTER_KEY=<generate below>
 REDIS_URL=redis://localhost:6379/0
 
@@ -82,7 +82,7 @@ Or if you have PostgreSQL and Redis installed natively, make sure they're runnin
 The setup script installs all Python and Node.js dependencies, runs database migrations, and creates your first admin API key.
 
 ```bash
-./llmway setup
+./openrouter setup
 ```
 
 This does:
@@ -99,7 +99,7 @@ This does:
 ## Step 5 — Start the Gateway
 
 ```bash
-./llmway start
+./openrouter start
 ```
 
 Open **http://localhost:<app_port>** in your browser, enter the `sk-...` token from setup.
@@ -156,26 +156,26 @@ docker compose logs -f credential-vault
 
 ### Option B — systemd Service
 
-For running LLMWAY on bare metal that starts on boot:
+For running OPENROUTER on bare metal that starts on boot:
 
-1. Edit `scripts/llmway.service`:
+1. Edit `scripts/openrouter.service`:
    - Update `User`, `Group`, and `WorkingDirectory` to match your system
    - Update `ExecStart` to the absolute path of `uv`
 
 2. Install and enable:
 
 ```bash
-sudo cp scripts/llmway.service /etc/systemd/system/
+sudo cp scripts/openrouter.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable llmway.service
-sudo systemctl start llmway.service
+sudo systemctl enable openrouter.service
+sudo systemctl start openrouter.service
 ```
 
 3. Check status and logs:
 
 ```bash
-sudo systemctl status llmway.service
-sudo journalctl -u llmway -f
+sudo systemctl status openrouter.service
+sudo journalctl -u openrouter -f
 ```
 
 ---
@@ -249,7 +249,7 @@ pkill -f "launcher.main:app"
 rm -rf gui/dist gui/node_modules .venv data/
 
 # Remove the directory
-cd .. && rm -rf llmway/
+cd .. && rm -rf openrouter/
 ```
 
 ---
@@ -259,7 +259,7 @@ cd .. && rm -rf llmway/
 | Problem | Solution |
 |---------|---------|
 | `ConnectionRefusedError: port 5433` | Run `docker compose up -d postgres` |
-| `VAULT_MASTER_KEY not set` | Set it in `.env` and re-run `./llmway setup` |
+| `VAULT_MASTER_KEY not set` | Set it in `.env` and re-run `./openrouter setup` |
 | `No valid routing candidates found` | Add a provider + credential, then sync models |
 | OAuth callback fails | Set `API_BASE_URL` to your externally accessible URL |
 | GUI shows "Unauthorized" | Check the `sk-...` token in dashboard settings |

@@ -1,5 +1,5 @@
 """
-Pytest configuration and shared fixtures for the LLMWAY test suite.
+Pytest configuration and shared fixtures for the OpenRouter test suite.
 
 The tests hit the live API gateway that must be running on localhost:6565.
 They require two environment variables (or .env):
@@ -7,8 +7,8 @@ They require two environment variables (or .env):
   API_TOKEN   – a gateway key with ["api"] scope (no admin)
 
 You can create them with:
-  ./llmway key          # creates API token
-  ./llmway key --admin  # creates admin token
+  ./openrouter key          # creates API token
+  ./openrouter key --admin  # creates admin token
 
 The tokens are also read from .admin_token and .api_token files at the project root.
 """
@@ -23,7 +23,7 @@ import httpx
 # ──────────────────────────────────────────────────────────────────
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent
 
-BASE_URL = os.environ.get("LLMWAY_BASE_URL", "http://localhost:6565")
+BASE_URL = os.environ.get("OPENROUTER_BASE_URL", "http://localhost:6565")
 
 
 def _read_token_file(filename: str) -> str | None:

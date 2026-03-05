@@ -56,7 +56,7 @@ async def list_models(
                     "id": tier_name,
                     "object": "model",
                     "created": 1686935002,
-                    "owned_by": "llmway",
+                    "owned_by": "openrouter",
                     "virtual": True
                 })
         except Exception:
