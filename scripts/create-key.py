@@ -49,13 +49,13 @@ async def create_key(label: str, scopes: list[str], token_type: str = "api"):
         await session.commit()
         await session.refresh(new_key)
         
-        print(f"\n✅ {token_type.capitalize()} Gateway Key Created Successfully!")
+        print(f"\n[SUCCESS] {token_type.capitalize()} Gateway Key Created Successfully!")
         print(f"Label: {new_key.label}")
         print(f"Key Hash: {new_key.key_hash}")
         print("\n" + "="*60)
         print(f"RAW TOKEN:\n{raw_token}")
         print("="*60 + "\n")
-        print("⚠️ SAVE THIS TOKEN NOW. It will never be shown again in plaintext.")
+        print("[WARNING] SAVE THIS TOKEN NOW. It will never be shown again in plaintext.")
         print("\nTo use with LLMWAY, set your environment variable:")
         print(f"  export LLMWAY_API_KEY={raw_token}\n")
 

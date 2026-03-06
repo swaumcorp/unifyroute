@@ -113,7 +113,7 @@ def _verify_master_password() -> bool:
             "MASTER_PASSWORD is not set in .env. Run `./unifyroute setup` first "
             "or set MASTER_PASSWORD manually."
         )
-    entered = getpass.getpass("  🔐 Enter master password: ")
+    entered = getpass.getpass("  [PASSWORD] Enter master password: ")
     if entered != expected:
         _die("Incorrect master password.")
     return True

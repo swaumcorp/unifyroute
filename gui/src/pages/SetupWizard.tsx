@@ -79,12 +79,12 @@ function StepDot({ idx, current, label, Icon }: { idx: number; current: number; 
             <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${done
                 ? "bg-emerald-500 border-emerald-500 text-white"
                 : active
-                    ? "bg-violet-600 border-violet-600 text-white shadow-lg shadow-violet-500/30"
+                    ? "bg-orange-600 border-orange-600 text-white shadow-lg shadow-orange-500/30"
                     : "border-slate-300 dark:border-slate-700 text-slate-400"
                 }`}>
                 {done ? <Check size={18} /> : <Icon size={16} />}
             </div>
-            <span className={`text-[10px] font-semibold uppercase tracking-wider ${active ? "text-violet-500" : done ? "text-emerald-500" : "text-slate-400"}`}>
+            <span className={`text-[10px] font-semibold uppercase tracking-wider ${active ? "text-orange-500" : done ? "text-emerald-500" : "text-slate-400"}`}>
                 {label}
             </span>
         </div>
@@ -100,8 +100,8 @@ function StepConnector({ done }: { done: boolean }) {
 function SectionTitle({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle: string }) {
     return (
         <div className="flex items-start gap-4 mb-8">
-            <div className="p-3 rounded-xl bg-violet-100 dark:bg-violet-500/10">
-                <Icon className="text-violet-600 dark:text-violet-400" size={22} />
+            <div className="p-3 rounded-xl bg-orange-100 dark:bg-orange-500/10">
+                <Icon className="text-orange-600 dark:text-orange-400" size={22} />
             </div>
             <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{title}</h2>
@@ -138,7 +138,7 @@ function ProviderStep({
 
     if (loading) return (
         <div className="flex items-center justify-center h-48">
-            <Loader2 className="animate-spin text-violet-500" size={32} />
+            <Loader2 className="animate-spin text-orange-500" size={32} />
         </div>
     )
     if (error) return (
@@ -192,7 +192,7 @@ function ProviderStep({
                 })}
             </div>
             {selected.length > 0 && (
-                <p className="mt-4 text-sm text-violet-600 dark:text-violet-400 font-medium">
+                <p className="mt-4 text-sm text-orange-600 dark:text-orange-400 font-medium">
                     {selected.length} provider{selected.length !== 1 ? "s" : ""} selected
                 </p>
             )}
@@ -407,8 +407,8 @@ function ModelsStep({ providerStates, onUpdateModels }: {
                                         <label
                                             key={cat.model_id}
                                             className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${sel
-                                                ? "border-violet-400 bg-violet-50 dark:bg-violet-500/10"
-                                                : "border-slate-200 dark:border-slate-700 hover:border-violet-200 dark:hover:border-violet-800"
+                                                ? "border-orange-400 bg-orange-50 dark:bg-orange-500/10"
+                                                : "border-slate-200 dark:border-slate-700 hover:border-orange-200 dark:hover:border-orange-800"
                                                 }`}
                                         >
                                             <Checkbox
@@ -631,9 +631,9 @@ function BrainStep({ providerStates, brain, onBrainChange }: {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:border-violet-200 dark:hover:border-violet-700 transition-all"
+                    <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:border-orange-200 dark:hover:border-orange-700 transition-all"
                         onClick={() => onBrainChange([])}>
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedIdx === -1 ? "border-violet-500 bg-violet-500" : "border-slate-300"}`}>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedIdx === -1 ? "border-orange-500 bg-orange-500" : "border-slate-300"}`}>
                             {selectedIdx === -1 && <div className="w-2 h-2 rounded-full bg-white" />}
                         </div>
                         <span className="text-sm text-slate-500">Skip (configure later)</span>
@@ -641,10 +641,10 @@ function BrainStep({ providerStates, brain, onBrainChange }: {
                     {candidates.map((c, i) => (
                         <div
                             key={i}
-                            className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${i === selectedIdx ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10" : "border-slate-200 dark:border-slate-700 hover:border-violet-200 dark:hover:border-violet-800"}`}
+                            className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${i === selectedIdx ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10" : "border-slate-200 dark:border-slate-700 hover:border-orange-200 dark:hover:border-orange-800"}`}
                             onClick={() => onBrainChange([{ ...c.entry, priority: brain[0]?.priority ?? 10 }])}
                         >
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${i === selectedIdx ? "border-violet-500 bg-violet-500" : "border-slate-300"}`}>
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${i === selectedIdx ? "border-orange-500 bg-orange-500" : "border-slate-300"}`}>
                                 {i === selectedIdx && <div className="w-2 h-2 rounded-full bg-white" />}
                             </div>
                             <span className="text-sm font-medium text-slate-900 dark:text-slate-100 flex-1">{c.display}</span>
@@ -684,7 +684,7 @@ function SummaryStep({ providerStates, routing, brain }: {
                     <Card key={ps.provider.name} className="border-slate-200 dark:border-slate-800">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-center gap-2">
-                                <Database size={16} className="text-violet-500" />
+                                <Database size={16} className="text-orange-500" />
                                 {ps.provider.display_name}
                                 <Badge variant="outline" className="text-[10px] ml-1">{ps.provider.auth_type}</Badge>
                             </CardTitle>
@@ -723,7 +723,7 @@ function SummaryStep({ providerStates, routing, brain }: {
                     <Card className="border-slate-200 dark:border-slate-800">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-center gap-2">
-                                <GitBranch size={16} className="text-violet-500" /> Routing Tiers
+                                <GitBranch size={16} className="text-orange-500" /> Routing Tiers
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0">
@@ -743,7 +743,7 @@ function SummaryStep({ providerStates, routing, brain }: {
                     <Card className="border-slate-200 dark:border-slate-800">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base flex items-center gap-2">
-                                <Brain size={16} className="text-violet-500" /> Brain Assignment
+                                <Brain size={16} className="text-orange-500" /> Brain Assignment
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="pt-0">
@@ -910,7 +910,7 @@ export function SetupWizard() {
         <div className="w-full">
             {/* Page header */}
             <div className="flex items-center gap-3 mb-8">
-                <div className="p-3 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg shadow-violet-500/30">
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg shadow-orange-500/30">
                     <Wand2 className="text-white" size={24} />
                 </div>
                 <div>

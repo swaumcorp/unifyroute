@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "aiohttp>=3.13.3",
     "api-gateway",
     "apscheduler>=3.11.2",
     "credential-vault",

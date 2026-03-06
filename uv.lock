@@ -1017,6 +1017,7 @@ name = "launcher"
 version = "0.1.0"
 source = { editable = "launcher" }
 dependencies = [
+    { name = "aiohttp" },
     { name = "api-gateway" },
     { name = "apscheduler" },
     { name = "credential-vault" },
@@ -1029,6 +1030,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.13.3" },
     { name = "api-gateway", editable = "api-gateway" },
     { name = "apscheduler", specifier = ">=3.11.2" },
     { name = "credential-vault", editable = "credential-vault" },
@@ -1838,6 +1840,7 @@ name = "router"
 version = "0.1.0"
 source = { editable = "router" }
 dependencies = [
+    { name = "aiohttp" },
     { name = "litellm" },
     { name = "pyyaml" },
     { name = "redis" },
@@ -1847,6 +1850,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.13.3" },
     { name = "litellm", specifier = ">=1.49.0" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "redis", specifier = ">=5.1.1" },
