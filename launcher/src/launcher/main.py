@@ -5,6 +5,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
+# Pre-load anyio's asyncio backend to work around a Python 3.14 import-system
+# regression: anyio's _backends subpackage fails to import when first accessed
+# from a worker thread (e.g. Starlette StaticFiles.check_config via run_sync).
+# Importing it here ensures loaded_backends['asyncio'] is populated at startup.
+import anyio._backends._asyncio as _anyio_asyncio_backend  # noqa: F401
+import anyio._core._eventloop as _anyio_eventloop  # noqa: F401
+_anyio_eventloop.loaded_backends.setdefault("asyncio", _anyio_asyncio_backend.backend_class)
+
 from launcher.scheduler import start_scheduler, shutdown_scheduler
 from api_gateway.main import app as gateway_app
 from credential_vault.main import app as vault_app

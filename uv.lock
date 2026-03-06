@@ -1971,6 +1971,7 @@ dependencies = [
     { name = "alembic" },
     { name = "cryptography" },
     { name = "pydantic" },
+    { name = "python-dotenv" },
     { name = "sqlalchemy" },
 ]
 
@@ -1980,6 +1981,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.3" },
     { name = "cryptography", specifier = ">=43.0.1" },
     { name = "pydantic", specifier = ">=2.9.2" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "sqlalchemy", specifier = ">=2.0.35" },
 ]
 
