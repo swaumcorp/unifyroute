@@ -210,7 +210,7 @@ export function Providers() {
                         </>
                     )}
                     <Button
-                        className="bg-[#F54927] hover:bg-[#D43111] text-white border-none"
+                        className="bg-orange-600 hover:bg-orange-700 text-white border-none"
                         onClick={openSeed}
                     >
                         <Sparkles className="mr-2 h-4 w-4" />

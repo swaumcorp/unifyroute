@@ -167,12 +167,12 @@ function ProviderStep({
                             key={p.name}
                             onClick={() => onToggle(p)}
                             className={`relative text-left p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-md ${sel
-                                ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10 shadow-violet-200 dark:shadow-violet-900"
-                                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-violet-200 dark:hover:border-violet-800"
+                                ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10 shadow-orange-200 dark:shadow-orange-900"
+                                : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-orange-200 dark:hover:border-orange-800"
                                 }`}
                         >
                             {sel && (
-                                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center">
+                                <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
                                     <Check size={12} className="text-white" />
                                 </span>
                             )}
@@ -537,8 +537,8 @@ function RoutingStep({ providerStates, routing, onRoutingChange }: {
                                 onRoutingChange(buildFromModels(allModels, s.value))
                             }}
                             className={`text-left p-4 rounded-xl border-2 transition-all ${strategy === s.value
-                                ? "border-violet-500 bg-violet-50 dark:bg-violet-500/10"
-                                : "border-slate-200 dark:border-slate-700 hover:border-violet-200"
+                                ? "border-orange-500 bg-orange-50 dark:bg-orange-500/10"
+                                : "border-slate-200 dark:border-slate-700 hover:border-orange-200"
                                 }`}
                         >
                             <p className="font-semibold text-sm text-slate-900 dark:text-slate-100">{s.label}</p>
@@ -777,14 +777,14 @@ function SuccessScreen({ summary, onReset }: { summary: WizardOnboardSummary; on
                     ["Brain", summary.brain.length],
                 ] as [string, number][]).map(([label, count]) => (
                     <div key={label} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3">
-                        <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{count}</p>
+                        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{count}</p>
                         <p className="text-xs text-slate-500">{label}</p>
                     </div>
                 ))}
             </div>
             <div className="flex justify-center gap-3">
                 <Button variant="outline" onClick={onReset}>Run Wizard Again</Button>
-                <Button asChild className="bg-violet-600 hover:bg-violet-700">
+                <Button asChild className="bg-orange-600 hover:bg-orange-700">
                     <a href="/">Go to Dashboard</a>
                 </Button>
             </div>
@@ -973,7 +973,7 @@ export function SetupWizard() {
                         <Button
                             onClick={() => setStep(step + 1)}
                             disabled={!canNext()}
-                            className="gap-1 bg-violet-600 hover:bg-violet-700"
+                            className="gap-1 bg-orange-600 hover:bg-orange-700"
                         >
                             Next <ChevronRight size={16} />
                         </Button>
@@ -981,7 +981,7 @@ export function SetupWizard() {
                         <Button
                             onClick={handleSave}
                             disabled={saving}
-                            className="gap-2 bg-emerald-600 hover:bg-emerald-700 min-w-[120px]"
+                            className="gap-2 bg-orange-600 hover:bg-orange-700 min-w-[120px]"
                         >
                             {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                             {saving ? "Saving..." : "Save Setup"}
