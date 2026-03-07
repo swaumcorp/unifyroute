@@ -51,18 +51,21 @@ async def poll_quotas():
             session.add(snapshot)
 
             # 2. Update Redis per-model keys so the router can read them
-            r = get_redis()
-            if tokens is not None and cred.provider and cred.provider.models:
-                for model in cred.provider.models:
-                    if model.enabled:
-                        await r.setex(
-                            f"quota:{cred.id}:{model.model_id}",
-                            600,
-                            tokens,
-                        )
-            elif tokens is not None:
-                # Fallback: no models in DB yet; write a generic key
-                await r.setex(f"quota:{cred.id}:default", 600, tokens)
+            try:
+                r = get_redis()
+                if tokens is not None and cred.provider and cred.provider.models:
+                    for model in cred.provider.models:
+                        if model.enabled:
+                            await r.setex(
+                                f"quota:{cred.id}:{model.model_id}",
+                                600,
+                                tokens,
+                            )
+                elif tokens is not None:
+                    # Fallback: no models in DB yet; write a generic key
+                    await r.setex(f"quota:{cred.id}:default", 600, tokens)
+            except Exception as e:
+                logger.error(f"[Quota Error] Failed to write quota to Redis for {cred.label}: {e}")
 
         await session.commit()
     logger.info("Quota polling complete.")

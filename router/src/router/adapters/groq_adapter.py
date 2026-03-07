@@ -15,6 +15,14 @@ class GroqAdapter(ProviderAdapter):
             )
         if r.status_code != 200:
             return []
+            
+        data = r.json()
+        models_list = []
+        if isinstance(data, dict):
+            models_list = data.get("data", data.get("models", []))
+        elif isinstance(data, list):
+            models_list = data
+            
         return [
             ModelInfo(
                 model_id=m.get("id", ""),
@@ -22,7 +30,7 @@ class GroqAdapter(ProviderAdapter):
                 context_window=m.get("context_window", 131072),
                 supports_functions=True,
             )
-            for m in r.json().get("data", [])
+            for m in models_list
         ]
 
     async def _get_quota_impl(self, api_key: str, auth_type: str = "api_key") -> QuotaInfo:

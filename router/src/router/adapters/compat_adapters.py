@@ -21,8 +21,14 @@ class _OpenAICompatAdapter(ProviderAdapter):
             method="GET"
         )
         
-        if not data or not isinstance(data, dict):
+        if not data:
             return []
+            
+        models_data = []
+        if isinstance(data, dict):
+            models_data = data.get("data", data.get("models", []))
+        elif isinstance(data, list):
+            models_data = data
             
         return [
             ModelInfo(
@@ -31,7 +37,7 @@ class _OpenAICompatAdapter(ProviderAdapter):
                 context_window=m.get("context_window", 32768),
                 supports_functions=True,
             )
-            for m in data.get("data", [])
+            for m in models_data
         ]
 
     async def _get_quota_impl(self, api_key: str, auth_type: str = "api_key") -> QuotaInfo:
