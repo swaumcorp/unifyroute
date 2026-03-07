@@ -399,20 +399,21 @@ async def sync_provider_models(
         from router.adapters.base import ModelInfo
         model_infos = [
             ModelInfo(
-                model_id=m["model_id"],
-                display_name=m["display_name"],
-                context_window=m.get("context_window", 0),
-                input_cost_per_1k=m.get("input_cost_per_1k", 0.0),
-                output_cost_per_1k=m.get("output_cost_per_1k", 0.0),
-                supports_streaming=m.get("supports_streaming", True),
-                supports_functions=m.get("supports_functions", False),
+                model_id=m.model_id,
+                display_name=m.display_name,
+                context_window=m.context_window,
+                input_cost_per_1k=m.input_cost_per_1k,
+                output_cost_per_1k=m.output_cost_per_1k,
+                supports_streaming=m.supports_streaming,
+                supports_functions=m.supports_functions,
             )
             for m in catalog
         ]
         source = "catalog"
 
     # ── Insert new models ────────────────────────────────────────────────────
-    catalog_tiers = {m["model_id"]: m.get("tier", "") for m in get_catalog(provider.name)}
+    catalog_entries = get_catalog(provider.name)
+    catalog_tiers = {m.model_id: m.tier for m in catalog_entries}
     for info in model_infos:
         if info.model_id in existing_ids:
             continue

@@ -9,7 +9,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "redis>=5.1.1",
     "shared",
-    "aiohttp>=3.13.3",
+    "aiohttp>=3.10,<3.13",
 ]
 
 [build-system]

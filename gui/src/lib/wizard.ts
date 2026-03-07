@@ -4,7 +4,7 @@
  * Calls the /admin/wizard/* endpoints introduced by the wizard module.
  */
 
-import { fetcher } from './api'
+import { fetcher, getAuthToken } from './api'
 
 const API_BASE = '/api'
 
@@ -112,9 +112,13 @@ export async function getSuggestedModels(
 export async function submitWizard(
     payload: WizardOnboardRequest,
 ): Promise<WizardOnboardResponse> {
+    const token = getAuthToken()
     const res = await fetch(`${API_BASE}/admin/wizard/onboard`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         credentials: 'include',
         body: JSON.stringify(payload),
     })

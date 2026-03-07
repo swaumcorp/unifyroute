@@ -210,7 +210,7 @@ export function Providers() {
                         </>
                     )}
                     <Button
-                        className="bg-orange-600 hover:bg-orange-700 text-white border-none"
+                        className="bg-accent hover:bg-accent/90 text-accent-foreground border-none"
                         onClick={openSeed}
                     >
                         <Sparkles className="mr-2 h-4 w-4" />
@@ -385,7 +385,11 @@ export function Providers() {
                     {error && <p className="text-sm text-destructive">{error}</p>}
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setMode(null)}>Cancel</Button>
-                        <Button onClick={handleSeedConfirm} disabled={saving || selectedSeeds.size === 0}>
+                        <Button
+                            className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                            onClick={handleSeedConfirm}
+                            disabled={saving || selectedSeeds.size === 0}
+                        >
                             {saving ? "Seeding..." : "Seed Selected"}
                         </Button>
                     </DialogFooter>

@@ -27,6 +27,7 @@ _PROVIDER_SEED = [
     {"name": "groq",            "display_name": "Groq",                   "auth_type": "api_key", "enabled": True},
     {"name": "mistral",         "display_name": "Mistral",                "auth_type": "api_key", "enabled": True},
     {"name": "together",        "display_name": "Together AI",            "auth_type": "api_key", "enabled": True},
+    {"name": "openrouter",      "display_name": "OpenRouter",             "auth_type": "api_key", "enabled": True},
     {"name": "xai",             "display_name": "xAI (Grok)",             "auth_type": "api_key", "enabled": True},
     {"name": "nvidia",          "display_name": "NVIDIA NIM",             "auth_type": "api_key", "enabled": True},
     {"name": "unifyroute",      "display_name": "UnifyRouter",             "auth_type": "api_key", "enabled": True},
