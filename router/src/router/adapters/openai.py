@@ -7,7 +7,7 @@ class OpenAIAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__("openai", "openai")
         
-    async def _list_models_impl(self, api_key: str) -> List[ModelInfo]:
+    async def _list_models_impl(self, api_key: str, auth_type: str = "api_key") -> List[ModelInfo]:
         from .base import fetch_json_safe
         
         data = await fetch_json_safe(
@@ -31,7 +31,7 @@ class OpenAIAdapter(ProviderAdapter):
             models.append(ModelInfo(model_id=m_id, display_name=f"OpenAI {m_id}"))
         return models
 
-    async def _get_quota_impl(self, api_key: str) -> QuotaInfo:
+    async def _get_quota_impl(self, api_key: str, auth_type: str = "api_key") -> QuotaInfo:
         # OpenAI doesn't have a direct quota endpoint anymore (deprecated).
         # Typically we check billing/usage or rely on headers from actual requests.
         # Fallback to returning a default "healthy" snapshot.

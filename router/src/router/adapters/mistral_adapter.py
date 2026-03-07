@@ -7,7 +7,7 @@ class MistralAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__("mistral", "mistral")
 
-    async def _list_models_impl(self, api_key: str) -> List[ModelInfo]:
+    async def _list_models_impl(self, api_key: str, auth_type: str = "api_key") -> List[ModelInfo]:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
                 "https://api.mistral.ai/v1/models",
@@ -24,7 +24,7 @@ class MistralAdapter(ProviderAdapter):
             for m in r.json().get("data", [])
         ]
 
-    async def _get_quota_impl(self, api_key: str) -> QuotaInfo:
+    async def _get_quota_impl(self, api_key: str, auth_type: str = "api_key") -> QuotaInfo:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
                 "https://api.mistral.ai/v1/models",

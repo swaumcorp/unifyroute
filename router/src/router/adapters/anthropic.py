@@ -7,7 +7,7 @@ class AnthropicAdapter(ProviderAdapter):
     def __init__(self):
         super().__init__("anthropic", "anthropic")
 
-    async def _list_models_impl(self, api_key: str) -> List[ModelInfo]:
+    async def _list_models_impl(self, api_key: str, auth_type: str = "api_key") -> List[ModelInfo]:
         from .base import fetch_json_safe
         
         data = await fetch_json_safe(
@@ -31,7 +31,7 @@ class AnthropicAdapter(ProviderAdapter):
             ))
         return models
 
-    async def _get_quota_impl(self, api_key: str) -> QuotaInfo:
+    async def _get_quota_impl(self, api_key: str, auth_type: str = "api_key") -> QuotaInfo:
         import httpx
         
         # Anthropic exposes rate limit headers on standard API calls.

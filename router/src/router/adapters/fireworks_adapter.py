@@ -12,7 +12,7 @@ class FireworksAdapter(ProviderAdapter):
         # litellm uses 'fireworks_ai' prefix for Fireworks models
         super().__init__("fireworks", "fireworks_ai")
 
-    async def _list_models_impl(self, api_key: str) -> List[ModelInfo]:
+    async def _list_models_impl(self, api_key: str, auth_type: str = "api_key") -> List[ModelInfo]:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
                 f"{self._BASE}/models",
@@ -31,7 +31,7 @@ class FireworksAdapter(ProviderAdapter):
             ))
         return models
 
-    async def _get_quota_impl(self, api_key: str) -> QuotaInfo:
+    async def _get_quota_impl(self, api_key: str, auth_type: str = "api_key") -> QuotaInfo:
         """Fireworks. Returns rate-limit headers on API responses when they are applied."""
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(

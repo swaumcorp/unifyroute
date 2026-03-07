@@ -11,7 +11,7 @@ class _OpenAICompatAdapter(ProviderAdapter):
         self._base_url = base_url
         self._default_tokens = default_tokens
 
-    async def _list_models_impl(self, api_key: str) -> List[ModelInfo]:
+    async def _list_models_impl(self, api_key: str, auth_type: str = "api_key") -> List[ModelInfo]:
         from .base import fetch_json_safe
         
         data = await fetch_json_safe(
@@ -34,7 +34,7 @@ class _OpenAICompatAdapter(ProviderAdapter):
             for m in data.get("data", [])
         ]
 
-    async def _get_quota_impl(self, api_key: str) -> QuotaInfo:
+    async def _get_quota_impl(self, api_key: str, auth_type: str = "api_key") -> QuotaInfo:
         from .base import fetch_json_safe
         import httpx
         
