@@ -5,6 +5,7 @@ __pycache__
 *.pyc
 openclaw
 .env
+.env.backup.*
 *log*
 .admin_token
 .api_token

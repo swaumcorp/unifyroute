@@ -161,6 +161,37 @@ def backup_config(reason: str = ""):
     return backup_path
 
 
+def find_saved_configs() -> list[Path]:
+    """Find all .env.backup.* files in the project root, newest first."""
+    backups = sorted(
+        ROOT.glob(".env.backup.*"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    return backups
+
+
+def restore_config(backup_path: Path) -> dict[str, str]:
+    """Restore configuration from a backup file.
+
+    Copies the backup to .env and returns the parsed config dict.
+    """
+    shutil.copy(backup_path, ENV_FILE)
+    config = read_env_file(ENV_FILE)
+    ok(f"Configuration restored from {backup_path.name}")
+
+    # Show restored values (mask secrets)
+    secret_keys = {"MASTER_PASSWORD", "VAULT_MASTER_KEY", "JWT_SECRET"}
+    for key, val in config.items():
+        if key in secret_keys:
+            display = val[:3] + "***" if len(val) > 3 else "***"
+        else:
+            display = val
+        info(f"  {key} = {display}")
+
+    return config
+
+
 def find_uv() -> str:
     """Find the uv binary."""
     uv = shutil.which("uv")
@@ -289,66 +320,99 @@ def cmd_install():
     """Interactive first-time setup."""
     print(c("bold", "\n🚀 UnifyRoute Setup — First-Time Install\n"))
 
-    # ── 1. Database ────────────────────────────────────────────────
-    banner("1. Database Configuration")
-    print("  UnifyRoute uses SQLite for local data storage.")
-
     config: dict[str, str] = {}
-    config["DB_BACKEND"] = "sqlite"
+    restored = False
 
-    sqlite_path = ask("SQLite file path", "data/unifyroute.db")
-    config["SQLITE_PATH"] = sqlite_path
+    # ── Check for saved configurations ─────────────────────────────
+    saved_configs = find_saved_configs()
+    if saved_configs:
+        banner("Saved Configurations Found")
+        print("  The following saved configurations were found:\n")
+        for i, backup in enumerate(saved_configs, 1):
+            mtime = datetime.datetime.fromtimestamp(backup.stat().st_mtime)
+            # Extract reason tag from filename if present
+            name = backup.name  # e.g. .env.backup.20260308_235500
+            print(f"    {i}. {name}  ({mtime.strftime('%Y-%m-%d %H:%M:%S')})")
+        print()
 
-    # ── 2. Application ──────────────────────────────────────────────
-    banner("2. Application Settings")
-    app_port = ask("Application port", "6565")
-    app_host = ask("Application host", "localhost")
-    api_base = ask("API base URL", f"http://{app_host}:{app_port}")
+        if ask_bool("Would you like to restore a previously saved configuration?", default=True):
+            if len(saved_configs) == 1:
+                choice = 1
+            else:
+                choice_str = ask(f"Which backup to restore? [1-{len(saved_configs)}]", "1")
+                try:
+                    choice = int(choice_str)
+                    if choice < 1 or choice > len(saved_configs):
+                        raise ValueError
+                except ValueError:
+                    warn(f"Invalid choice. Using most recent backup.")
+                    choice = 1
 
-    config["PORT"] = app_port
-    config["HOST"] = app_host
-    config["API_BASE_URL"] = api_base
-    config["REDIS_URL"] = f"redis://localhost:6379/0"
+            selected = saved_configs[choice - 1]
+            config = restore_config(selected)
+            restored = True
+            ok("Configuration restored! Skipping interactive configuration steps.")
 
-    # ── 3. Master Password ─────────────────────────────────────────
-    banner("3. Master Password")
-    print("  This password is used to:")
-    print("    • Log in to the UnifyRoute GUI")
-    print("    • Authorize CLI token operations (unifyroute get token, create token, etc.)")
-    while True:
-        master_pw = ask("Master password", secret=True)
-        if len(master_pw) < 8:
-            warn("Password must be at least 8 characters.")
-            continue
-        confirm_pw = ask("Confirm master password", secret=True)
-        if master_pw != confirm_pw:
-            warn("Passwords do not match. Try again.")
-            continue
-        break
-    config["MASTER_PASSWORD"] = master_pw
-    ok("Master password set.")
+    if not restored:
+        # ── 1. Database ────────────────────────────────────────────────
+        banner("1. Database Configuration")
+        print("  UnifyRoute uses SQLite for local data storage.")
 
-    # ── 4. Secrets ──────────────────────────────────────────────────
-    banner("4. Generating Secrets")
+        config["DB_BACKEND"] = "sqlite"
 
-    # Read existing secrets from .env if present (for idempotency)
-    existing = read_env_file(ENV_FILE)
+        sqlite_path = ask("SQLite file path", "data/unifyroute.db")
+        config["SQLITE_PATH"] = sqlite_path
 
-    vault_key = existing.get("VAULT_MASTER_KEY", "")
-    if not vault_key:
-        vault_key = _generate_fernet_key()
-        ok("VAULT_MASTER_KEY generated.")
-    else:
-        ok("VAULT_MASTER_KEY already set — keeping existing.")
-    config["VAULT_MASTER_KEY"] = vault_key
+        # ── 2. Application ──────────────────────────────────────────────
+        banner("2. Application Settings")
+        app_port = ask("Application port", "6565")
+        app_host = ask("Application host", "localhost")
+        api_base = ask("API base URL", f"http://{app_host}:{app_port}")
 
-    jwt_secret = existing.get("JWT_SECRET", "")
-    if not jwt_secret:
-        jwt_secret = secrets.token_hex(32)
-        ok("JWT_SECRET generated.")
-    else:
-        ok("JWT_SECRET already set — keeping existing.")
-    config["JWT_SECRET"] = jwt_secret
+        config["PORT"] = app_port
+        config["HOST"] = app_host
+        config["API_BASE_URL"] = api_base
+        config["REDIS_URL"] = f"redis://localhost:6379/0"
+
+        # ── 3. Master Password ─────────────────────────────────────────
+        banner("3. Master Password")
+        print("  This password is used to:")
+        print("    • Log in to the UnifyRoute GUI")
+        print("    • Authorize CLI token operations (unifyroute get token, create token, etc.)")
+        while True:
+            master_pw = ask("Master password", secret=True)
+            if len(master_pw) < 8:
+                warn("Password must be at least 8 characters.")
+                continue
+            confirm_pw = ask("Confirm master password", secret=True)
+            if master_pw != confirm_pw:
+                warn("Passwords do not match. Try again.")
+                continue
+            break
+        config["MASTER_PASSWORD"] = master_pw
+        ok("Master password set.")
+
+        # ── 4. Secrets ──────────────────────────────────────────────────
+        banner("4. Generating Secrets")
+
+        # Read existing secrets from .env if present (for idempotency)
+        existing = read_env_file(ENV_FILE)
+
+        vault_key = existing.get("VAULT_MASTER_KEY", "")
+        if not vault_key:
+            vault_key = _generate_fernet_key()
+            ok("VAULT_MASTER_KEY generated.")
+        else:
+            ok("VAULT_MASTER_KEY already set — keeping existing.")
+        config["VAULT_MASTER_KEY"] = vault_key
+
+        jwt_secret = existing.get("JWT_SECRET", "")
+        if not jwt_secret:
+            jwt_secret = secrets.token_hex(32)
+            ok("JWT_SECRET generated.")
+        else:
+            ok("JWT_SECRET already set — keeping existing.")
+        config["JWT_SECRET"] = jwt_secret
 
     # ── 5. Write .env ───────────────────────────────────────────────
     banner("5. Writing .env")
@@ -422,10 +486,14 @@ def cmd_install():
         warn("Could not create admin key automatically. Run: ./unifyroute create token admin")
 
     # ── Done ─────────────────────────────────────────────────────────
+    api_base = config.get("API_BASE_URL", "http://localhost:6565")
     banner("✅ Setup Complete!")
     print(f"\n  Start the app with:  {c('bold', './unifyroute start')}")
     print(f"  Open:                {c('cyan', api_base)}")
-    print(f"  Login with the master password you set above.\n")
+    if restored:
+        print(f"  Login with the master password from your restored configuration.\n")
+    else:
+        print(f"  Login with the master password you set above.\n")
 
 
 def cmd_refresh():

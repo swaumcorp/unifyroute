@@ -1,17 +1,16 @@
-"""Consolidated schema (replaces all previous migrations)
+"""Full consolidated schema
 
-Revision ID: 001_consolidated
+Revision ID: 001_full_schema
 Revises:
-Create Date: 2026-02-26 11:35:00.000000
+Create Date: 2026-03-09 00:00:00.000000
 
-This is a single consolidated migration that replaces:
-  - 63b74a375d6a_initial_schema
-  - eda5d526e3a8_add_oauth_meta_to_providers
-  - 2ba11aba1f53_add_empty_string_to_tier_check_
-  - f1a2b3c4d5e6_add_supports_functions
-  - ca020f8cf0c2_add_raw_token
-  - a1b2c3d4e5f6_add_credential_id_to_request_logs
-  - a9b8c7d6e5f4_add_brain_configs
+This is a single consolidated migration that creates the complete UnifyRoute
+database schema from scratch.  It replaces all previous incremental migrations:
+  - 001_consolidated_schema (7 core tables)
+  - e7e89709f21c (chat_sessions, chat_messages)
+  - b84eb3d51464 (rate_limit_rpm on gateway_keys)
+  - 0a5746722fe4 (routing_configs)
+  - bdcc5219d5d3 (prompt_json, response_text on request_logs)
 """
 from typing import Sequence, Union
 
@@ -19,7 +18,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "001_consolidated"
+revision: str = "001_full_schema"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -35,7 +34,7 @@ def _uuid_type():
 
 
 def upgrade() -> None:
-    """Create the full LLMWay schema from scratch."""
+    """Create the full UnifyRoute schema from scratch."""
     uuid_t = _uuid_type()
 
     # ── gateway_keys ──────────────────────────────────────────────────────────
@@ -47,6 +46,7 @@ def upgrade() -> None:
         sa.Column("raw_token", sa.Text(), nullable=True),
         sa.Column("scopes", sa.JSON(), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False),
+        sa.Column("rate_limit_rpm", sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_gateway_keys_key_hash", "gateway_keys", ["key_hash"], unique=True)
@@ -141,6 +141,8 @@ def upgrade() -> None:
         sa.Column("cost_usd", sa.Numeric(precision=10, scale=6), nullable=True),
         sa.Column("latency_ms", sa.Integer(), nullable=True),
         sa.Column("status", sa.Text(), nullable=False),
+        sa.Column("prompt_json", sa.Text(), nullable=True),
+        sa.Column("response_text", sa.Text(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -172,9 +174,57 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
 
+    # ── chat_sessions ─────────────────────────────────────────────────────────
+    op.create_table(
+        "chat_sessions",
+        sa.Column("id", uuid_t, nullable=False),
+        sa.Column("topic", sa.Text(), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+
+    # ── chat_messages ─────────────────────────────────────────────────────────
+    op.create_table(
+        "chat_messages",
+        sa.Column("id", uuid_t, nullable=False),
+        sa.Column("session_id", uuid_t, nullable=False),
+        sa.Column("role", sa.Text(), nullable=False),
+        sa.Column("content", sa.Text(), nullable=False),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.ForeignKeyConstraint(["session_id"], ["chat_sessions.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("id"),
+    )
+
+    # ── routing_configs ───────────────────────────────────────────────────────
+    op.create_table(
+        "routing_configs",
+        sa.Column("id", uuid_t, nullable=False),
+        sa.Column("yaml_content", sa.Text(), nullable=False),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+            nullable=False,
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+
 
 def downgrade() -> None:
-    """Drop all LLMWay tables."""
+    """Drop all UnifyRoute tables."""
+    op.drop_table("routing_configs")
+    op.drop_table("chat_messages")
+    op.drop_table("chat_sessions")
     op.drop_table("brain_configs")
     op.drop_table("request_logs")
     op.drop_table("quota_snapshots")
