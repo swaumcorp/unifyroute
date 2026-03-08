@@ -109,3 +109,8 @@ class XAIAdapter(_OpenAICompatAdapter):
     """xAI Grok — OpenAI-compatible at api.x.ai/v1."""
     def __init__(self):
         super().__init__("xai", "xai", "https://api.x.ai/v1", 100_000)
+
+class OpenRouterAdapter(_OpenAICompatAdapter):
+    """OpenRouter — OpenAI-compatible at openrouter.ai/api/v1."""
+    def __init__(self):
+        super().__init__("openrouter", "openrouter", "https://openrouter.ai/api/v1", 200_000)

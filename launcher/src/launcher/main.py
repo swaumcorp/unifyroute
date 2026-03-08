@@ -82,7 +82,9 @@ app.mount("/internal", vault_app)
 app.mount("/api", gateway_app)
 
 # 3. GUI (Static Files)
-gui_dist_path = os.path.join(os.path.dirname(__file__), "../../../gui/dist")
+# Use absolute path relative to this file to handle uvicorn working directories correctly
+current_file = os.path.abspath(__file__)
+gui_dist_path = os.path.normpath(os.path.join(os.path.dirname(current_file), "../../../gui/dist"))
 if os.path.exists(gui_dist_path):
     app.mount("/", StaticFiles(directory=gui_dist_path, html=True), name="gui")
 else:

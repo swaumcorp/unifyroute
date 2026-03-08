@@ -359,10 +359,12 @@ async def get_ranked_candidates(session: AsyncSession, alias: str, request: Chat
 
     # --- Handle 'auto' alias: task-aware selection with fallback chain ---
     if alias == "auto":
+        all_candidates = []
+        
         # 1. Try task-specific model matching (e.g., code tasks → coding models)
         task_candidates = await _try_task_specific_models(session, request, diagnostics)
         if task_candidates:
-            return task_candidates
+            all_candidates.extend(task_candidates)
 
         # 2. Fall back to tier-based routing with task-aware tier selection
         chosen = _auto_select_tier(request)
@@ -372,13 +374,18 @@ async def get_ranked_candidates(session: AsyncSession, alias: str, request: Chat
             "lite": ["lite"],
         }
         
-        all_candidates = []
+        seen_keys = {(str(c.credential_id), c.model_id) for c in all_candidates}
+        
         for tier in fallback_order.get(chosen, ["lite"]):
             try:
                 # To prevent infinite recursion, we lookup the tier directly
                 tier_cands = await get_ranked_candidates(session, tier, request, _is_fallback=True, diagnostics=diagnostics)
                 if tier_cands:
-                    all_candidates.extend(tier_cands)
+                    for c in tier_cands:
+                        key = (str(c.credential_id), c.model_id)
+                        if key not in seen_keys:
+                            all_candidates.append(c)
+                            seen_keys.add(key)
             except RuntimeError:
                 pass
                 

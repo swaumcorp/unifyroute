@@ -15,7 +15,8 @@ from .compat_adapters import (
     PerplexityAdapter,
     DeepSeekAdapter,
     CerebrasAdapter,
-    XAIAdapter
+    XAIAdapter,
+    OpenRouterAdapter
 )
 
 # Registry
@@ -31,6 +32,7 @@ adapters: Dict[str, ProviderAdapter] = {
     "zai": ZaiAdapter(),
     "fireworks": FireworksAdapter(),
     "together": TogetherAdapter(),
+    "openrouter": OpenRouterAdapter(),
     "unifyroute": UnifyRouterAdapter(),
     "perplexity": PerplexityAdapter(),
     "deepseek": DeepSeekAdapter(),
