@@ -620,7 +620,7 @@ function BrainStep({ providerStates, brain, onBrainChange }: {
 
     return (
         <div>
-            <SectionTitle icon={Brain} title="Brain Configuration" subtitle="The Brain is LLMWay's internal LLM used for system tasks. Select a provider/credential/model for it." />
+            <SectionTitle icon={Brain} title="Brain Configuration" subtitle="The Brain is UnifyRoute's internal LLM used for system tasks. Select a provider/credential/model for it." />
             {candidates.length === 0 ? (
                 <div className="flex items-start gap-3 text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-4">
                     <Info size={18} className="shrink-0 mt-0.5" />
@@ -678,7 +678,7 @@ function SummaryStep({ providerStates, routing, brain }: {
 }) {
     return (
         <div>
-            <SectionTitle icon={ClipboardCheck} title="Review & Confirm" subtitle="Review everything below before saving. Click Save to persist all configuration to LLMWay." />
+            <SectionTitle icon={ClipboardCheck} title="Review & Confirm" subtitle="Review everything below before saving. Click Save to persist all configuration to UnifyRoute." />
             <div className="space-y-6">
                 {providerStates.map(ps => (
                     <Card key={ps.provider.name} className="border-slate-200 dark:border-slate-800">

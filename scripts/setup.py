@@ -488,6 +488,9 @@ def cmd_install():
     # ── 9. Database migrations ──────────────────────────────────────
     banner("9. Running Database Migrations")
     env = {**os.environ, **{k: v for k, v in config.items()}}
+    upgrade_cmd = [uv, "run", "--package", "shared", "alembic", "upgrade", "head"] if uv else [venv_python, "-m", "alembic", "upgrade", "head"]
+    result = subprocess.run(upgrade_cmd, cwd=str(ROOT), env=env)
+
     if result.returncode != 0:
         # If it failed, it might be because the DB has an old revision ID that we deleted
         # during consolidation. If we just restored, we should stamp it.

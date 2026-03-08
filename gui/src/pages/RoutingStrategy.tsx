@@ -149,7 +149,7 @@ function BrainDialog({ tier, onClose, onInsert }: BrainDialogProps) {
         setError(null)
         setGeneratedYaml("")
 
-        const systemPrompt = `You are an expert LLM routing configuration assistant for LLMWay gateway.
+        const systemPrompt = `You are an expert LLM routing configuration assistant for UnifyRoute gateway.
 Generate a valid routing.yaml configuration block for the "${tier?.id}" tier based on the user's requirements.
 The routing.yaml uses this structure:
 tiers:

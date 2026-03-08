@@ -1000,11 +1000,11 @@ requires-dist = [
     { name = "api-gateway", editable = "api-gateway" },
     { name = "apscheduler", specifier = ">=3.11.2" },
     { name = "credential-vault", editable = "credential-vault" },
-    { name = "fastapi", specifier = ">=0.129.0" },
+    { name = "fastapi", specifier = ">=0.115.0" },
     { name = "quota-poller", editable = "quota-poller" },
     { name = "router", editable = "router" },
     { name = "shared", editable = "shared" },
-    { name = "uvicorn", specifier = ">=0.41.0" },
+    { name = "uvicorn", specifier = ">=0.31.0" },
 ]
 
 [[package]]

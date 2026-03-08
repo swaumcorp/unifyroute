@@ -454,7 +454,7 @@ export function sendChatMessageStream(
                             throw new Error(chunk.error)
                         }
                         if (chunk.model) modelName = chunk.model
-                        if (chunk._llmway?.provider) providerName = chunk._llmway.provider
+                        if (chunk._unifyroute?.provider) providerName = chunk._unifyroute.provider
                         const delta = chunk.choices?.[0]?.delta?.content
                         if (delta) onDelta(delta)
                     }
