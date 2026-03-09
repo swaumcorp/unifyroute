@@ -14,6 +14,7 @@ from uuid import UUID
 
 from shared.database import get_db_session
 from shared.models import Provider, Credential, ProviderModel, GatewayKey, RequestLog, RoutingConfig
+from shared.security import unwrap_secret
 from shared.schemas import (
     ProviderCreate, ProviderUpdate, ProviderResponse,
     CredentialCreate, CredentialUpdate, CredentialResponse,
@@ -37,7 +38,7 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 async def admin_login(req: LoginRequest, response: Response):
     import os
-    admin_password = os.environ.get("MASTER_PASSWORD") or os.environ.get("ADMIN_PASSWORD", "admin")
+    admin_password = unwrap_secret(os.environ.get("MASTER_PASSWORD") or os.environ.get("ADMIN_PASSWORD", "admin"))
     if req.password != admin_password:
         logger.warning("Admin login failed: invalid password")
         raise HTTPException(status_code=401, detail="Invalid password")
@@ -741,7 +742,7 @@ async def reveal_key(
     session: AsyncSession = Depends(get_db_session)
 ):
     import os
-    admin_password = os.environ.get("MASTER_PASSWORD") or os.environ.get("ADMIN_PASSWORD", "admin")
+    admin_password = unwrap_secret(os.environ.get("MASTER_PASSWORD") or os.environ.get("ADMIN_PASSWORD", "admin"))
     if req.password != admin_password:
         raise HTTPException(status_code=401, detail="Invalid master password")
 
