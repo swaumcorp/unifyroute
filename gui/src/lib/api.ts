@@ -120,7 +120,7 @@ export function useGatewayKeys() {
 
 export function useLogs(page = 1, limit = 20, provider?: string, status?: string, tier?: string, search?: string) {
     const url = new URL('/admin/logs', window.location.origin)
-    url.searchParams.set('page', page.toString())
+    url.searchParams.set('offset', ((page - 1) * limit).toString())
     url.searchParams.set('limit', limit.toString())
     if (provider && provider !== "all") url.searchParams.set('provider', provider)
     if (status && status !== "all") url.searchParams.set('status', status)
