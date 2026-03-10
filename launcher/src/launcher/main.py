@@ -18,7 +18,28 @@ from api_gateway.main import app as gateway_app
 from credential_vault.main import app as vault_app
 
 logger = logging.getLogger("launcher")
-logging.basicConfig(level=logging.INFO)
+
+# Configure Uvicorn/FastAPI loggers to make sure output reaches stdout where unifying script captures it
+def _configure_loggers():
+    import sys
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    formatter = logging.Formatter(log_format)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    
+    # Configure root logger and essential app loggers
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    root_logger.handlers = [console_handler]
+    
+    for name in ["launcher", "api_gateway", "router", "shared", "credential_vault", "uvicorn", "uvicorn.error", "uvicorn.access"]:
+        l = logging.getLogger(name)
+        l.setLevel(logging.INFO)
+        l.handlers = [console_handler]
+        l.propagate = False
+
+_configure_loggers()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -66,6 +87,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi import Request
+
+_OPENAI_COMPAT_PREFIXES = ("/v1/", "/chat/", "/completions", "/models")
+
+class V1RewriteMiddleware(BaseHTTPMiddleware):
+    """
+    OpenClaw and other OpenAI-compatible clients use paths like /v1/chat/completions
+    or even /chat/completions directly. Since the Gateway is mounted at /api, we
+    transparently rewrite these paths to /api/v1/* to avoid 405 errors from the
+    SPA static file handler catching everything that doesn't match a known prefix.
+    """
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        # Already correctly prefixed or is an internal/GUI path
+        if path.startswith("/api/") or path.startswith("/internal/"):
+            return await call_next(request)
+
+        # /v1/... → /api/v1/...
+        if path.startswith("/v1/"):
+            request.scope["path"] = "/api" + path
+        # /chat/completions → /api/v1/chat/completions
+        elif path.startswith("/chat/"):
+            request.scope["path"] = "/api/v1" + path
+        # /completions → /api/v1/completions
+        elif path == "/completions" or path.startswith("/completions"):
+            request.scope["path"] = "/api/v1" + path
+        # /models → /api/v1/models
+        elif path == "/models" or path.startswith("/models"):
+            request.scope["path"] = "/api/v1" + path
+
+        return await call_next(request)
+
+app.add_middleware(V1RewriteMiddleware)
+
 
 # Mount the sub-applications
 # 1. Credential Vault

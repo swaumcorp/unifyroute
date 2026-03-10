@@ -510,21 +510,20 @@ def cmd_install():
     print(f"  Upgrading pip...")
     subprocess.run([venv_python, "-m", "pip", "install", "-q", "--upgrade", "pip"], check=False)
     
-    # Try using uv sync first (faster)
+    # Try using uv sync --all-packages (syncs EVERY workspace member into .venv)
     uv = find_or_install_uv(venv_python)
     if uv:
-        # Set UV_LINK_MODE=copy to avoid hardlink issues on Windows
+        # UV_LINK_MODE=copy avoids hardlink issues on Windows/some Linux filesystems
         env_with_uv = {**os.environ, "UV_LINK_MODE": "copy"}
-        print(f"  Installing via uv sync...")
-        result = subprocess.run([uv, "sync"], cwd=str(ROOT), env=env_with_uv)
+        print(f"  Installing all workspace packages via uv sync --all-packages...")
+        result = subprocess.run([uv, "sync", "--all-packages"], cwd=str(ROOT), env=env_with_uv)
         if result.returncode != 0:
-            warn("uv sync had issues. Falling back to pip...")
+            warn("uv sync --all-packages had issues. Falling back to pip...")
             uv = None
     
-    # Always ensure core packages are installed in venv (pip fallback if uv failed)
+    # Pip fallback if uv is unavailable
     if not uv:
         print(f"  Installing packages via pip into venv...")
-        # Install all local packages and their dependencies
         for package_dir in ["shared", "api-gateway", "router", "launcher", "credential-vault", "quota-poller"]:
             pkg_path = ROOT / package_dir
             if pkg_path.exists():
@@ -536,12 +535,10 @@ def cmd_install():
                 if result.returncode != 0:
                     warn(f"Failed to install {package_dir}, but continuing...")
         
-        # Ensure core dependencies are installed
         print(f"    Installing core dependencies...")
         subprocess.run(
             [venv_python, "-m", "pip", "install", "-q", "uvicorn", "fastapi", "sqlalchemy", "alembic"],
-            cwd=str(ROOT),
-            check=False
+            cwd=str(ROOT), check=False
         )
     
     ok("Python dependencies installed in virtual environment.")

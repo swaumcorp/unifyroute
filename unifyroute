@@ -211,7 +211,28 @@ def cmd_start():
     print(f"ℹ️   Launcher starting on {host}:{port}")
     print(f"ℹ️   Logs → {log_file}")
 
-    # Use the venv python directly
+    # Use uv run if available
+    uv = _find_uv()
+    if uv:
+        cmd = [
+            uv, "run", "--package", "launcher", "python", "-m", "uvicorn",
+            "--app-dir", "launcher/src",
+            "launcher.main:app", "--port", port, "--host", host
+        ]
+        
+        with open(log_file, "a") as lf:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(SCRIPT_DIR),
+                stdout=lf,
+                stderr=subprocess.STDOUT,
+                env=os.environ.copy(),
+            )
+        _ok(f"UnifyRoute started (PID {proc.pid}). Logs → {log_file.name}")
+        _info(f"Open: http://localhost:{port}")
+        return
+
+    # Fallback to direct python run if uv isn't found
     if sys.platform == "win32":
         python = SCRIPT_DIR / ".venv" / "Scripts" / "python.exe"
     else:
@@ -220,7 +241,7 @@ def cmd_start():
     if not python.exists():
         _die("Virtual environment not found. Run './unifyroute setup' first.")
 
-    # Verify required packages are installed
+    # Verify required packages are installed in the venv fallback
     check_venv_modules = [
         "uvicorn", "fastapi", "api_gateway", "launcher", "shared", "router"
     ]
@@ -263,21 +284,31 @@ def cmd_start():
     _info(f"Open: http://localhost:{port}")
 
 
-def cmd_stop():
-    """Stop the application."""
-    import shutil
-    import signal
-    print("🛑  Stopping UnifyRoute...")
+def _stop_server():
+    """Kill any running UnifyRoute server process (by name and by port)."""
+    _load_env()
+    port = os.environ.get("PORT", "6565")
 
-    # Try to kill the launcher process
-    # On Windows, use taskkill; on Unix, use pkill
     if sys.platform == "win32":
         subprocess.run(["taskkill", "/IM", "python.exe", "/F"], capture_output=True)
     else:
+        # Kill by process pattern
         subprocess.run(["pkill", "-f", "launcher.main:app"], capture_output=True)
-    _ok("Standalone processes stopped (if any).")
+        # Also kill whatever is holding the configured port — catches stale zombies
+        # from previous starts that used a different command pattern.
+        try:
+            result = subprocess.run(
+                ["lsof", "-ti", f":{port}"],
+                capture_output=True, text=True
+            )
+            pids = result.stdout.strip().split()
+            for pid in pids:
+                if pid.isdigit():
+                    subprocess.run(["kill", pid], capture_output=True)
+        except Exception:
+            pass  # lsof not available, ignore
 
-    # Stop systemd service (Linux only)
+    # Stop systemd service if active (Linux)
     if sys.platform != "win32":
         result = subprocess.run(
             ["systemctl", "is-active", "--quiet", "unifyroute.service"],
@@ -288,10 +319,42 @@ def cmd_stop():
             _ok("Systemd service stopped.")
 
 
+def cmd_stop():
+    """Stop the application."""
+    print("🛑  Stopping UnifyRoute...")
+    _stop_server()
+    _ok("UnifyRoute stopped.")
+
+
 def cmd_restart():
-    cmd_stop()
+    print("🔄  Restarting UnifyRoute...")
+    _stop_server()
     import time
     time.sleep(1)
+    cmd_start()
+
+
+def cmd_cleanstart():
+    """
+    Stop any running server, clear logs, then start fresh.
+    Does NOT wipe the database or config — just kills stale processes and rotates logs.
+    """
+    print("🧹  Clean start — stopping everything...")
+    _stop_server()
+
+    import time
+    time.sleep(1)
+
+    # Rotate log file so new run starts clean
+    log_file = SCRIPT_DIR / "logs" / "api.log"
+    if log_file.exists():
+        import datetime
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        archived = log_file.with_name(f"api.{ts}.log")
+        log_file.rename(archived)
+        _info(f"Archived previous log → {archived.name}")
+
+    print("🚀  Starting fresh...")
     cmd_start()
 
 
@@ -359,6 +422,7 @@ Commands:
   start                               Start the application
   stop                                Stop the application
   restart                             Restart the application
+  clean-start                         Stop everything, archive logs, start fresh
   get token [all|admin|api]           List API tokens (requires master password)
   create token [admin|api]            Create a new API token (requires master password)
   update token <id> <label>           Update a token's label (requires master password)
@@ -371,6 +435,7 @@ Examples:
   ./unifyroute setup refresh          Re-sync deps and rebuild GUI
   ./unifyroute setup uninstall        Clean up everything
   ./unifyroute start                  Start the app
+  ./unifyroute clean-start            Stop stale processes, archive logs, start fresh
   ./unifyroute get token              List all tokens
   ./unifyroute create token admin     Create an admin token
 """
@@ -403,6 +468,9 @@ def main():
 
     elif cmd == "restart":
         cmd_restart()
+
+    elif cmd in ("clean-start", "cleanstart"):
+        cmd_cleanstart()
 
     elif cmd == "get":
         if rest and rest[0] == "token":
