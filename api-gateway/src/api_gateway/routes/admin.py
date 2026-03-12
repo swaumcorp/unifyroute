@@ -522,10 +522,11 @@ async def update_model(
         raise HTTPException(status_code=404, detail="Model not found")
         
     update_data = updates.model_dump(exclude_unset=True)
-    
-    if "tier" in update_data and "enabled" not in update_data:
-        update_data["enabled"] = bool(update_data["tier"])
-        
+
+    # Only auto-enable when assigning a specific tier, not when clearing it
+    if "tier" in update_data and "enabled" not in update_data and update_data["tier"]:
+        update_data["enabled"] = True
+
     for k, v in update_data.items():
         setattr(db_obj, k, v)
         
