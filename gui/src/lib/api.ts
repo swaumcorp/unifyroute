@@ -468,6 +468,57 @@ export function sendChatMessageStream(
     return () => controller.abort()
 }
 
+// ── Chat Session Management (DB-backed) ──────────────────────────────────
+
+export interface ChatSessionSummary {
+    id: string
+    topic: string | null
+    created_at: string | null
+}
+
+export interface ChatSessionDetail extends ChatSessionSummary {
+    messages: Array<{
+        id: string
+        role: string
+        content: string
+        created_at: string | null
+    }>
+}
+
+export function useChatSessions() {
+    const { data, error, isLoading, mutate } = useSWR('/admin/chat/sessions', fetcher)
+    return { sessions: (data ?? []) as ChatSessionSummary[], isLoading, isError: error, mutate }
+}
+
+export async function createChatSession(topic?: string): Promise<ChatSessionSummary> {
+    return postJSON('/admin/chat/sessions', { topic: topic || null })
+}
+
+export async function getChatSession(id: string): Promise<ChatSessionDetail> {
+    return fetcher(`/admin/chat/sessions/${id}`)
+}
+
+export async function deleteChatSession(id: string) {
+    return deleteRequest(`/admin/chat/sessions/${id}`)
+}
+
+export async function deleteAllChatSessions() {
+    const res = await fetch(`${API_BASE}/admin/chat/sessions`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+        credentials: 'include',
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || 'Delete all sessions failed')
+    }
+    return res.json().catch(() => null)
+}
+
+export async function addChatMessage(sessionId: string, role: string, content: string) {
+    return postJSON(`/admin/chat/sessions/${sessionId}/messages`, { role, content })
+}
+
 // ── Brain Module API ──────────────────────────────────────────────────────────
 
 export interface BrainHealth {

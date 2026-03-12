@@ -114,6 +114,10 @@ async def _stream_generator(response, start_time: float, bg_data: dict, is_text_
         if "status" not in bg_data:
             bg_data["status"] = "cancelled"
 
+        # Persist the log directly here instead of via BackgroundTask
+        # to guarantee logging happens after stream data is fully accumulated.
+        await log_request_bg_task(bg_data)
+
 @router.post("/chat/completions")
 async def create_chat_completion(
     request: Request,
@@ -194,7 +198,6 @@ async def create_chat_completion(
                 return StreamingResponse(
                     _stream_generator(response, start_time, bg_data, is_text_completion=False),
                     media_type="text/event-stream",
-                    background=BackgroundTask(log_request_bg_task, bg_data)
                 )
             else:
                 completion_tokens = response.usage.completion_tokens if hasattr(response, 'usage') else 0
@@ -397,7 +400,6 @@ async def create_completion(
                 return StreamingResponse(
                     _stream_generator(response, start_time, bg_data, is_text_completion=True),
                     media_type="text/event-stream",
-                    background=BackgroundTask(log_request_bg_task, bg_data)
                 )
             else:
                 completion_tokens = response.usage.completion_tokens if hasattr(response, 'usage') else 0
