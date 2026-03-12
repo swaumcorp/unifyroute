@@ -30,6 +30,8 @@ ROOT = SCRIPT_DIR.parent
 ENV_FILE = ROOT / ".env"
 SAMPLE_ENV = ROOT / "sample.env"
 VENV_DIR = ROOT / ".venv"
+CONFBACKUP_DIR = ROOT / "confbackup"
+METADATA_FILENAME = "metadata.json"
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -176,30 +178,34 @@ def backup_config(reason: str = ""):
     return None
 
 
-def find_saved_configs() -> list[str]:
-    """Find all backup timestamps in the project root, newest first.
-    A valid backup has at least a .env.backup.* file.
+def find_saved_configs() -> list[tuple[str, dict]]:
+    """Find all backup configurations in confbackup folder, newest first.
+
+    Returns:
+        List of (backup_id, metadata) tuples sorted by creation time (newest first).
     """
-    backups = sorted(
-        ROOT.glob(".env.backup.*"),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
-    # Return just the timestamp part
-    return [p.name.replace(".env.backup.", "") for p in backups]
+    return list_backups()
 
 
-def restore_config(ts: str) -> dict[str, str]:
-    """Restore configuration and database from a backup timestamp.
+def restore_config(backup_id: str) -> dict[str, str]:
+    """Restore configuration and database from a backup in confbackup folder.
 
-    Copies the backup files to their original locations.
+    Args:
+        backup_id: The backup folder name (e.g., 'backup_20260312_214200')
+
+    Returns:
+        Parsed config dict after restoration, or empty dict on failure.
     """
-    env_backup = ROOT / f".env.backup.{ts}"
-    if env_backup.exists():
-        shutil.copy(env_backup, ENV_FILE)
+    backup_dir = CONFBACKUP_DIR / backup_id
+    config = {}
+
+    # Restore .env
+    env_file = backup_dir / ".env"
+    if env_file.exists():
+        shutil.copy(env_file, ENV_FILE)
         config = read_env_file(ENV_FILE)
-        ok(f"Configuration restored from {env_backup.name}")
-        
+        ok(f"Configuration restored from {backup_id}")
+
         # Show restored values (mask secrets)
         secret_keys = {"MASTER_PASSWORD", "VAULT_MASTER_KEY", "JWT_SECRET"}
         for key, val in config.items():
@@ -209,15 +215,18 @@ def restore_config(ts: str) -> dict[str, str]:
                 display = val
             info(f"  {key} = {display}")
     else:
-        config = {}
+        warn(f"Configuration file not found in {backup_id}")
 
-    db_backup = ROOT / f".db.backup.{ts}"
-    if db_backup.exists():
+    # Restore database
+    db_file = backup_dir / "unifyroute.db"
+    if db_file.exists():
         data_dir = ROOT / "data"
         data_dir.mkdir(exist_ok=True)
-        db_file = data_dir / "unifyroute.db"
-        shutil.copy(db_backup, db_file)
-        ok(f"Database restored from {db_backup.name}")
+        dest_db = data_dir / "unifyroute.db"
+        shutil.copy(db_file, dest_db)
+        ok(f"Database restored from {backup_id}")
+    else:
+        warn(f"Database file not found in {backup_id}")
 
     return config
 
@@ -396,6 +405,115 @@ def find_or_install_uv(venv_python: str) -> list[str] | None:
     return None
 
 
+def generate_backup_id() -> str:
+    """Generate a unique backup ID using timestamp format: backup_YYYYMMDD_HHMMSS"""
+    return datetime.datetime.now().strftime("backup_%Y%m%d_%H%M%S")
+
+
+def create_metadata_file(backup_dir: Path, backup_id: str, reason: str) -> None:
+    """Create a metadata.json file for a backup."""
+    import json
+
+    metadata = {
+        "backup_id": backup_id,
+        "created_at": datetime.datetime.now().isoformat(),
+        "reason": reason,
+        "includes": ["env", "database"],
+        "description": f"Configuration backup from {reason}"
+    }
+
+    # Calculate size
+    size_bytes = 0
+    env_file = backup_dir / ".env"
+    db_file = backup_dir / "unifyroute.db"
+    if env_file.exists():
+        size_bytes += env_file.stat().st_size
+    if db_file.exists():
+        size_bytes += db_file.stat().st_size
+    metadata["size_bytes"] = size_bytes
+
+    metadata_file = backup_dir / METADATA_FILENAME
+    metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+
+def get_backup_metadata(backup_id: str) -> dict | None:
+    """Read and return metadata for a backup, or None if not found."""
+    import json
+
+    metadata_file = CONFBACKUP_DIR / backup_id / METADATA_FILENAME
+    if not metadata_file.exists():
+        return None
+
+    try:
+        return json.loads(metadata_file.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def list_backups() -> list[tuple[str, dict]]:
+    """Scan confbackup directory and return list of (backup_id, metadata) tuples, sorted by timestamp descending."""
+    if not CONFBACKUP_DIR.exists():
+        return []
+
+    backups = []
+    for backup_folder in sorted(CONFBACKUP_DIR.iterdir(), reverse=True):
+        if backup_folder.is_dir():
+            backup_id = backup_folder.name
+            metadata = get_backup_metadata(backup_id)
+            if metadata:
+                backups.append((backup_id, metadata))
+
+    return backups
+
+
+def save_backup_to_confbackup(backup_id: str, reason: str, backup_ts: str) -> bool:
+    """Move temporary backups to confbackup folder with metadata.
+
+    Args:
+        backup_id: Unique backup identifier
+        reason: Reason for backup (e.g., "uninstall", "refresh")
+        backup_ts: Timestamp from backup_config() (e.g., "20260312_214200")
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Create backup directory
+        backup_dir = CONFBACKUP_DIR / backup_id
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
+        # Move .env backup
+        env_backup_src = ROOT / f".env.backup.{backup_ts}"
+        if env_backup_src.exists():
+            env_backup_dst = backup_dir / ".env"
+            shutil.move(str(env_backup_src), str(env_backup_dst))
+
+        # Move database backup
+        db_backup_src = ROOT / f".db.backup.{backup_ts}"
+        if db_backup_src.exists():
+            db_backup_dst = backup_dir / "unifyroute.db"
+            shutil.move(str(db_backup_src), str(db_backup_dst))
+
+        # Create metadata
+        create_metadata_file(backup_dir, backup_id, reason)
+
+        return True
+    except Exception as e:
+        err(f"Failed to save backup to confbackup: {e}")
+        return False
+
+
+def cleanup_temp_backups(backup_ts: str) -> None:
+    """Delete temporary backup files from root if they exist."""
+    env_backup = ROOT / f".env.backup.{backup_ts}"
+    db_backup = ROOT / f".db.backup.{backup_ts}"
+
+    if env_backup.exists():
+        env_backup.unlink()
+    if db_backup.exists():
+        db_backup.unlink()
+
+
 def _remove_unifyroute_images():
     """Remove any locally-built Docker images whose name starts with 'unifyroute'.
 
@@ -456,16 +574,13 @@ def cmd_install():
     if saved_configs:
         banner("Saved Configurations Found")
         print("  The following saved configurations were found:\n")
-        for i, ts in enumerate(saved_configs, 1):
-            env_backup = ROOT / f".env.backup.{ts}"
-            mtime = datetime.datetime.fromtimestamp(env_backup.stat().st_mtime)
-            
-            # Check what's included
-            includes = [".env"]
-            if (ROOT / f".db.backup.{ts}").exists():
-                includes.append("unifyroute.db")
-                
-            print(f"    {i}. Backup from {mtime.strftime('%Y-%m-%d %H:%M:%S')}  [includes: {', '.join(includes)}]")
+        for i, (backup_id, metadata) in enumerate(saved_configs, 1):
+            created_at_str = metadata.get("created_at", "Unknown")
+            reason = metadata.get("reason", "unknown")
+            size_kb = metadata.get("size_bytes", 0) // 1024
+
+            print(f"    {i}. {backup_id}")
+            print(f"       Created: {created_at_str}  |  Reason: {reason}  |  Size: {size_kb}KB")
         print()
 
         if ask_bool("Would you like to restore a previously saved configuration?", default=True):
@@ -481,8 +596,8 @@ def cmd_install():
                     warn(f"Invalid choice. Using most recent backup.")
                     choice = 1
 
-            selected_ts = saved_configs[choice - 1]
-            config = restore_config(selected_ts)
+            selected_backup_id, _ = saved_configs[choice - 1]
+            config = restore_config(selected_backup_id)
             restored = True
             ok("Configuration and database restored! Skipping interactive configuration steps.")
 
@@ -838,6 +953,31 @@ def cmd_uninstall():
             ok(f"Removed {d.relative_to(ROOT)}")
         else:
             info(f"Already absent: {d.relative_to(ROOT)}")
+
+    banner("4. Backup Management")
+    if ask_bool("Preserve this backup for future restores?", default=True):
+        # Generate backup ID and save to confbackup
+        backup_id = generate_backup_id()
+        # The backup_ts is the timestamp from the temporary backup files (e.g., "20260312_214200")
+        # We need to find the latest temporary backup timestamp
+        env_backups = sorted(ROOT.glob(".env.backup.*"), reverse=True)
+        if env_backups:
+            backup_ts = env_backups[0].name.replace(".env.backup.", "")
+            if save_backup_to_confbackup(backup_id, "uninstall", backup_ts):
+                ok(f"Backup saved to confbackup/{backup_id}/")
+            else:
+                warn("Failed to save backup to confbackup. Cleaning up temporary backups.")
+                cleanup_temp_backups(backup_ts)
+        else:
+            info("No temporary backups found to preserve.")
+    else:
+        # Clean up temporary backups
+        env_backups = sorted(ROOT.glob(".env.backup.*"), reverse=True)
+        if env_backups:
+            backup_ts = env_backups[0].name.replace(".env.backup.", "")
+            cleanup_temp_backups(backup_ts)
+            ok("Temporary backups cleaned up.")
+        info("Backup discarded.")
 
     banner("✅ Uninstall Complete!")
     print("  To reinstall: ./unifyroute setup")
