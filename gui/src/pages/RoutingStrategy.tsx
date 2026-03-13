@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -6,14 +6,24 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
     Save, RefreshCw, AlertCircle, CheckCircle2, Brain, Zap,
-    Sparkles, BookOpen, Cpu, Wand2, Loader2, X, ChevronDown, ChevronUp
+    Sparkles, BookOpen, Cpu, Wand2, Loader2, X, ChevronDown, ChevronUp, Activity, Lightbulb
 } from "lucide-react"
-import { useRoutingConfig, saveRoutingConfig, useBrainStatus, sendChatMessageStream } from "@/lib/api"
+import { useRoutingConfig, saveRoutingConfig, useBrainStatus, useBrainRanking, sendChatMessageStream, useProviders, useCredentials, useModels } from "@/lib/api"
 import { ErrorState } from "@/components/error-state"
+import type { BrainRankedEntry } from "@/lib/api"
 
-// ── Tier definitions ──────────────────────────────────────────────────────────
+// ── Type Definitions ──────────────────────────────────────────────────────────
+
+interface ProviderBrowserItem {
+    provider: { id: string; name: string; display_name: string; enabled: boolean }
+    credentials: Array<{ id: string; label: string; provider_id: string; enabled: boolean }>
+    models: Array<{ id: string; model_id: string; provider_id: string; tier: string; enabled: boolean }>
+    ranking: BrainRankedEntry | null
+}
 
 interface TierInfo {
     id: string
@@ -26,6 +36,26 @@ interface TierInfo {
     examples: string
     sampleYaml: string
 }
+
+// ── Helper Functions ──────────────────────────────────────────────────────────
+
+function combineProviderData(
+    providers: any[],
+    credentials: any[],
+    models: any[],
+    brainRanking: BrainRankedEntry[]
+): ProviderBrowserItem[] {
+    return providers
+        .filter(p => p.enabled)
+        .map(p => ({
+            provider: p,
+            credentials: credentials.filter(c => c.provider_id === p.id && c.enabled),
+            models: models.filter(m => m.provider_id === p.id && m.enabled),
+            ranking: brainRanking.find(r => r.provider === p.name) || null,
+        }))
+}
+
+// ── Tier Definitions ──────────────────────────────────────────────────────────
 
 const TIERS: TierInfo[] = [
     {
@@ -391,21 +421,265 @@ function TierCard({ tier, onBrainClick, onInsertSample }: TierCardProps) {
     )
 }
 
+// ── Provider Browser Section ──────────────────────────────────────────────────
+
+interface ProviderBrowserProps {
+    items: ProviderBrowserItem[]
+    selectedProviders: Set<string>
+    onToggleProvider: (providerId: string) => void
+    showHealth: boolean
+    onShowHealthToggle: () => void
+    searchTerm: string
+    onSearchChange: (term: string) => void
+}
+
+function ProviderBrowser({
+    items,
+    selectedProviders,
+    onToggleProvider,
+    showHealth,
+    onShowHealthToggle,
+    searchTerm,
+    onSearchChange,
+}: ProviderBrowserProps) {
+    const filtered = items.filter(item =>
+        item.provider.display_name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center gap-2">
+                <Input
+                    placeholder="Search providers..."
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                    className="max-w-xs"
+                />
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox checked={showHealth} onCheckedChange={onShowHealthToggle} />
+                    <span>Show health status</span>
+                </label>
+            </div>
+
+            {filtered.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                    <p>No providers found</p>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                    {filtered.map((item) => (
+                        <Card key={item.provider.id} className="overflow-hidden">
+                            <CardContent className="p-4">
+                                <div className="flex items-start gap-4">
+                                    <Checkbox
+                                        checked={selectedProviders.has(item.provider.id)}
+                                        onCheckedChange={() => onToggleProvider(item.provider.id)}
+                                    />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="font-medium">{item.provider.display_name}</span>
+                                            {item.credentials.length > 0 && (
+                                                <Badge variant="outline" className="text-xs">
+                                                    {item.credentials.length} credential{item.credentials.length !== 1 ? 's' : ''}
+                                                </Badge>
+                                            )}
+                                            {showHealth && item.ranking && (
+                                                <>
+                                                    {item.ranking.health_ok ? (
+                                                        <Badge className="bg-emerald-500 text-xs">
+                                                            {item.ranking.latency_ms}ms
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="destructive" className="text-xs">
+                                                            Unhealthy
+                                                        </Badge>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                        {item.models.length > 0 ? (
+                                            <div className="text-xs text-muted-foreground">
+                                                <span>{item.models.length} model{item.models.length !== 1 ? 's' : ''} available:</span>
+                                                <div className="mt-2 space-y-1">
+                                                    {item.models.map(m => (
+                                                        <div key={m.id} className="flex items-center gap-2 text-xs">
+                                                            <code className="px-2 py-1 bg-muted rounded">{m.model_id}</code>
+                                                            {m.tier && <Badge variant="outline" className="text-xs">{m.tier}</Badge>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-muted-foreground">No models available</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+// ── Strategy Builder Section ───────────────────────────────────────────────────
+
+interface StrategyBuilderProps {
+    activeTier: string
+    strategyType: string
+    selectedProviders: Map<string, ProviderBrowserItem>
+    onTierChange: (tier: string) => void
+    onStrategyChange: (strategy: string) => void
+    onGenerateWithBrain: () => void
+    brainLoading: boolean
+    brainProviders: any[]
+}
+
+function StrategyBuilder({
+    activeTier,
+    strategyType,
+    selectedProviders,
+    onTierChange,
+    onStrategyChange,
+    onGenerateWithBrain,
+    brainLoading,
+    brainProviders,
+}: StrategyBuilderProps) {
+    const tier = TIERS.find(t => t.id === activeTier)
+    const selectedForTier = Array.from(selectedProviders.values())
+
+    return (
+        <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Tier</Label>
+                    <Select value={activeTier} onValueChange={onTierChange}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {TIERS.map(t => (
+                                <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label>Strategy</Label>
+                    <Select value={strategyType} onValueChange={onStrategyChange}>
+                        <SelectTrigger>
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="cheapest_available">Cheapest Available</SelectItem>
+                            <SelectItem value="highest_quota">Highest Quota</SelectItem>
+                            <SelectItem value="round_robin">Round Robin</SelectItem>
+                            <SelectItem value="auto">Auto (Task-aware)</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {tier && (
+                <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border">
+                    <p className="text-xs text-muted-foreground mb-1">{tier.label} Tier</p>
+                    <p className="text-sm">{tier.description}</p>
+                </div>
+            )}
+
+            {selectedForTier.length > 0 && (
+                <div className="space-y-2">
+                    <Label>Selected Providers & Models</Label>
+                    <Card>
+                        <CardContent className="p-3">
+                            <div className="space-y-2">
+                                {selectedForTier.map(item => (
+                                    <div key={item.provider.id} className="space-y-1">
+                                        <div className="font-medium text-sm">{item.provider.display_name}</div>
+                                        <div className="text-xs space-y-1 ml-2">
+                                            {item.models.map((m: any) => (
+                                                <div key={m.id} className="flex items-center gap-2">
+                                                    <code className="px-2 py-1 bg-muted rounded text-xs">{m.model_id}</code>
+                                                    {m.tier && <Badge variant="outline" className="text-xs">{m.tier}</Badge>}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            <Button
+                onClick={onGenerateWithBrain}
+                disabled={selectedForTier.length === 0 || brainProviders.length === 0 || brainLoading}
+                className="w-full bg-orange-500 hover:bg-orange-600"
+            >
+                <Lightbulb className="h-4 w-4 mr-2" />
+                {brainLoading ? "Generating…" : "Generate Strategy with Brain AI"}
+            </Button>
+
+            {selectedForTier.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center">
+                    Select providers from the "Available Providers" section above to generate a strategy
+                </p>
+            )}
+        </div>
+    )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function RoutingStrategy() {
     const { routingConfig, isLoading, isError, mutate } = useRoutingConfig()
+    const { providers: allProviders } = useProviders()
+    const { credentials: allCredentials } = useCredentials()
+    const { models: allModels } = useModels()
+    const { ranking: brainRanking } = useBrainRanking()
+    const { providers: brainProviders } = useBrainStatus()
+
     const [yaml, setYaml] = useState("")
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState("")
     const [saveSuccess, setSaveSuccess] = useState(false)
     const [activeBrainTier, setActiveBrainTier] = useState<TierInfo | null>(null)
 
+    // New state for provider browser and strategy builder
+    const [selectedProvidersIds, setSelectedProvidersIds] = useState<Set<string>>(new Set())
+    const [activeTier, setActiveTier] = useState("lite")
+    const [strategyType, setStrategyType] = useState("cheapest_available")
+    const [showHealth, setShowHealth] = useState(false)
+    const [providerSearch, setProviderSearch] = useState("")
+    const [expandedProvidersSection, setExpandedProvidersSection] = useState(true)
+    const [expandedStrategySection, setExpandedStrategySection] = useState(false)
+    const [expandedTierRef, setExpandedTierRef] = useState(false)
+    const [brainGenerating, setBrainGenerating] = useState(false)
+    const abortRef = useRef<(() => void) | null>(null)
+
     useEffect(() => {
         if (routingConfig !== undefined && routingConfig !== null) {
             setYaml(routingConfig)
         }
     }, [routingConfig])
+
+    // Combine provider data with defensive checks
+    const providerBrowserItems = useMemo(() => {
+        if (!allProviders || !allCredentials || !allModels) return []
+        return combineProviderData(allProviders, allCredentials, allModels, brainRanking || [])
+    }, [allProviders, allCredentials, allModels, brainRanking])
+
+    // Get selected providers for current tier
+    const selectedProvidersMap = useMemo(() => {
+        const map = new Map()
+        selectedProvidersIds.forEach(id => {
+            const item = providerBrowserItems.find(i => i.provider.id === id)
+            if (item) map.set(id, item)
+        })
+        return map
+    }, [selectedProvidersIds, providerBrowserItems])
 
     const handleSave = async () => {
         setIsSaving(true)
@@ -431,6 +705,77 @@ export function RoutingStrategy() {
         setYaml(prev => (prev ? prev + "\n\n" + sample : sample))
     }
 
+    function handleToggleProvider(providerId: string) {
+        setSelectedProvidersIds(prev => {
+            const newSet = new Set(prev)
+            if (newSet.has(providerId)) {
+                newSet.delete(providerId)
+            } else {
+                newSet.add(providerId)
+            }
+            return newSet
+        })
+    }
+
+    async function handleGenerateWithBrain() {
+        if (selectedProvidersMap.size === 0 || brainProviders.length === 0) return
+
+        setBrainGenerating(true)
+        const selectedProvidersInfo = Array.from(selectedProvidersMap.values())
+
+        const systemPrompt = `You are an expert LLM routing configuration assistant for UnifyRoute gateway.
+Generate a valid routing.yaml configuration block for the "${activeTier}" tier based on these selected providers.
+The routing.yaml uses this structure:
+tiers:
+  <tier_name>:
+    strategy: cheapest_available | highest_quota | round_robin | auto
+    models:
+      - provider: <provider_name>
+        model: <model_id>
+
+Selected providers and models:
+${selectedProvidersInfo.map(p => `- ${p.provider.display_name}: ${p.models.map((m: any) => m.model_id).join(', ')}`).join('\n')}
+
+Routing strategy: ${strategyType}
+Tier description: ${TIERS.find(t => t.id === activeTier)?.description}
+
+Rules:
+- Return ONLY the YAML block starting with "tiers:" — no markdown fences, no explanation.
+- Use the exact provider and model IDs from the selected providers above.
+- Tailor strategy and model order based on the strategy type.
+- Add brief YAML comments explaining key choices.`
+
+        const messages = [
+            { role: "system" as const, content: systemPrompt },
+            { role: "user" as const, content: "Generate the routing configuration." },
+        ]
+
+        let accumulated = ""
+        abortRef.current = sendChatMessageStream(
+            brainProviders[0].model_id,
+            messages,
+            (delta) => {
+                accumulated += delta
+            },
+            () => {
+                setBrainGenerating(false)
+                // Insert as commented block
+                const commented = accumulated
+                    .split("\n")
+                    .map((line) => `# ${line}`)
+                    .join("\n")
+                const block = `\n# ── AI-suggested routing for ${activeTier} tier ──\n${commented}\n# ─────────────────────────────────────────\n`
+                handleBrainInsert(block)
+                abortRef.current = null
+            },
+            (err) => {
+                setSaveError(err.message || "Generation failed")
+                setBrainGenerating(false)
+                abortRef.current = null
+            },
+        )
+    }
+
     if (isError) return <ErrorState />
 
     return (
@@ -440,9 +785,8 @@ export function RoutingStrategy() {
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">Routing Strategy</h2>
                     <p className="text-muted-foreground pt-1">
-                        Configure tier aliases and routing strategies. Use the{" "}
-                        <Brain className="inline h-4 w-4 text-orange-500 -mt-0.5" />{" "}
-                        <strong>Brain</strong> button on any tier to auto-generate a strategy with AI.
+                        Configure routing strategies with AI assistance. Browse available providers, select them for each tier,
+                        and let the Brain generate optimal configurations.
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -462,34 +806,108 @@ export function RoutingStrategy() {
             <Card className="border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-950/20">
                 <CardContent className="pt-4">
                     <p className="text-sm text-blue-700 dark:text-blue-300">
-                        <strong>How it works:</strong> Define tiers with model lists and routing strategies.
+                        <strong>How it works:</strong> Expand "Available Providers" to see all configured providers and models,
+                        then use "Strategy Builder" to create tier configurations with Brain AI assistance.
                         Available strategies:{" "}
                         <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">cheapest_available</code>,{" "}
                         <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">highest_quota</code>,{" "}
-                        <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">round_robin</code>.{" "}
-                        The{" "}
-                        <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">auto</code> alias
-                        uses task-aware heuristics to pick the best tier automatically.
+                        <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">round_robin</code>,{" "}
+                        <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded text-xs">auto</code>.
                     </p>
                 </CardContent>
             </Card>
 
-            {/* Tier Cards */}
-            <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                    Built-in Tiers
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    {TIERS.map((tier) => (
-                        <TierCard
-                            key={tier.id}
-                            tier={tier}
-                            onBrainClick={setActiveBrainTier}
-                            onInsertSample={handleSampleInsert}
+            {/* Provider Browser Section - Collapsible */}
+            <Card>
+                <CardHeader
+                    className="cursor-pointer"
+                    onClick={() => setExpandedProvidersSection(!expandedProvidersSection)}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-blue-500" />
+                            <CardTitle className="text-base">Available Providers</CardTitle>
+                            {selectedProvidersIds.size > 0 && (
+                                <Badge variant="secondary">{selectedProvidersIds.size} selected</Badge>
+                            )}
+                        </div>
+                        {expandedProvidersSection ? <ChevronUp /> : <ChevronDown />}
+                    </div>
+                </CardHeader>
+                {expandedProvidersSection && (
+                    <CardContent className="pt-0">
+                        <ProviderBrowser
+                            items={providerBrowserItems}
+                            selectedProviders={selectedProvidersIds}
+                            onToggleProvider={handleToggleProvider}
+                            showHealth={showHealth}
+                            onShowHealthToggle={() => setShowHealth(!showHealth)}
+                            searchTerm={providerSearch}
+                            onSearchChange={setProviderSearch}
                         />
-                    ))}
-                </div>
-            </div>
+                    </CardContent>
+                )}
+            </Card>
+
+            {/* Strategy Builder Section - Collapsible */}
+            <Card>
+                <CardHeader
+                    className="cursor-pointer"
+                    onClick={() => setExpandedStrategySection(!expandedStrategySection)}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Lightbulb className="h-5 w-5 text-amber-500" />
+                            <CardTitle className="text-base">Strategy Builder</CardTitle>
+                        </div>
+                        {expandedStrategySection ? <ChevronUp /> : <ChevronDown />}
+                    </div>
+                </CardHeader>
+                {expandedStrategySection && (
+                    <CardContent className="pt-0">
+                        <StrategyBuilder
+                            activeTier={activeTier}
+                            strategyType={strategyType}
+                            selectedProviders={selectedProvidersMap}
+                            onTierChange={setActiveTier}
+                            onStrategyChange={setStrategyType}
+                            onGenerateWithBrain={handleGenerateWithBrain}
+                            brainLoading={brainGenerating}
+                            brainProviders={brainProviders}
+                        />
+                    </CardContent>
+                )}
+            </Card>
+
+            {/* Tier Reference Section - Collapsible */}
+            <Card>
+                <CardHeader
+                    className="cursor-pointer"
+                    onClick={() => setExpandedTierRef(!expandedTierRef)}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <BookOpen className="h-5 w-5 text-slate-500" />
+                            <CardTitle className="text-base">Tier Reference</CardTitle>
+                        </div>
+                        {expandedTierRef ? <ChevronUp /> : <ChevronDown />}
+                    </div>
+                </CardHeader>
+                {expandedTierRef && (
+                    <CardContent className="pt-0">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                            {TIERS.map((tier) => (
+                                <TierCard
+                                    key={tier.id}
+                                    tier={tier}
+                                    onBrainClick={setActiveBrainTier}
+                                    onInsertSample={handleSampleInsert}
+                                />
+                            ))}
+                        </div>
+                    </CardContent>
+                )}
+            </Card>
 
             {/* Status messages */}
             {saveError && (
@@ -511,7 +929,7 @@ export function RoutingStrategy() {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="text-sm font-medium font-mono">routing.yaml</CardTitle>
-                            <CardDescription>Changes apply instantly to the router without restart.</CardDescription>
+                            <CardDescription>Edit your routing configuration. Changes apply instantly without restart.</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
@@ -527,7 +945,8 @@ export function RoutingStrategy() {
                             onChange={(e) => setYaml(e.target.value)}
                             spellCheck={false}
                             placeholder={`# Example routing configuration
-# Use the Brain button above to generate a strategy, or uncomment a sample config.
+# Use the "Strategy Builder" section to generate configurations with AI assistance,
+# or edit directly below.
 # exhaustion_message: "We're sorry, no models or quota are available right now."
 # tiers:
 #   lite:

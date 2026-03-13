@@ -290,8 +290,15 @@ async def verify_credential(
         )
         if health.ok:
             message = f"Connected to {provider_display} – {health.latency_ms}ms"
+            cred.status = "ok"
+            cred.error_message = None
         else:
             message = f"Cannot reach {provider_display}: {health.message}"
+            cred.status = "error"
+            cred.error_message = health.message
+            
+        await session.commit()
+            
         return {
             "status": "success" if health.ok else "error",
             "message": message,
@@ -299,6 +306,9 @@ async def verify_credential(
             "status_code": health.status_code,
         }
     except Exception as exc:
+        cred.status = "error"
+        cred.error_message = str(exc)
+        await session.commit()
         return {
             "status": "error",
             "message": f"Verification failed: {exc}",
@@ -522,10 +532,11 @@ async def update_model(
         raise HTTPException(status_code=404, detail="Model not found")
         
     update_data = updates.model_dump(exclude_unset=True)
-    
-    if "tier" in update_data and "enabled" not in update_data:
-        update_data["enabled"] = bool(update_data["tier"])
-        
+
+    # Only auto-enable when assigning a specific tier, not when clearing it
+    if "tier" in update_data and "enabled" not in update_data and update_data["tier"]:
+        update_data["enabled"] = True
+
     for k, v in update_data.items():
         setattr(db_obj, k, v)
         

@@ -3,7 +3,11 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Send, RotateCcw, Loader2, Zap, Bot, User } from "lucide-react"
-import { sendChatMessage, sendChatMessageStream, type ChatMessage } from "@/lib/api"
+import {
+    sendChatMessage, sendChatMessageStream, type ChatMessage,
+    createChatSession, getChatSession, addChatMessage,
+    deleteAllChatSessions,
+} from "@/lib/api"
 
 interface DisplayMessage {
     role: "user" | "assistant"
@@ -21,19 +25,7 @@ const MODEL_OPTIONS = [
     { value: "thinking", label: "Thinking tier" },
 ]
 
-const STORAGE_KEY = "unifyroute_chat_history"
 const SETTINGS_KEY = "unifyroute_chat_settings"
-
-function loadHistory(): DisplayMessage[] {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        return raw ? JSON.parse(raw) : []
-    } catch { return [] }
-}
-
-function saveHistory(msgs: DisplayMessage[]) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(msgs)) } catch { /* quota exceeded */ }
-}
 
 function loadSettings(): { model: string; streaming: boolean } {
     try {
@@ -48,12 +40,14 @@ function saveSettings(s: { model: string; streaming: boolean }) {
 
 export function Chat() {
     const saved = loadSettings()
-    const [messages, setMessages] = useState<DisplayMessage[]>(loadHistory)
+    const [messages, setMessages] = useState<DisplayMessage[]>([])
     const [input, setInput] = useState("")
     const [model, setModel] = useState(saved.model)
     const [streaming, setStreaming] = useState(saved.streaming)
     const [loading, setLoading] = useState(false)
     const [streamingText, setStreamingText] = useState("")
+    const [sessionId, setSessionId] = useState<string | null>(null)
+    const [sessionLoading, setSessionLoading] = useState(true)
     const abortRef = useRef<(() => void) | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -64,8 +58,51 @@ export function Chat() {
 
     useEffect(scrollToBottom, [messages, streamingText, scrollToBottom])
 
-    // Persist messages whenever they change
-    useEffect(() => { saveHistory(messages) }, [messages])
+    // Load or create a session on mount
+    useEffect(() => {
+        let cancelled = false
+        async function init() {
+            try {
+                // Try to load the last active session from localStorage
+                const lastSessionId = localStorage.getItem("unifyroute_active_session")
+                if (lastSessionId) {
+                    try {
+                        const session = await getChatSession(lastSessionId)
+                        if (!cancelled) {
+                            setSessionId(session.id)
+                            setMessages(
+                                session.messages.map(m => ({
+                                    role: m.role as "user" | "assistant",
+                                    content: m.content,
+                                }))
+                            )
+                            setSessionLoading(false)
+                            return
+                        }
+                    } catch {
+                        // Session may have been deleted — create new one
+                    }
+                }
+                // Create a fresh session
+                const newSession = await createChatSession()
+                if (!cancelled) {
+                    setSessionId(newSession.id)
+                    localStorage.setItem("unifyroute_active_session", newSession.id)
+                    setSessionLoading(false)
+                }
+            } catch {
+                // If backend is unreachable, proceed without DB session
+                if (!cancelled) setSessionLoading(false)
+            }
+        }
+        init()
+        return () => { cancelled = true }
+    }, [])
+
+    // Migrate: remove old localStorage chat history if present
+    useEffect(() => {
+        localStorage.removeItem("unifyroute_chat_history")
+    }, [])
 
     // Persist settings when model or streaming changes
     useEffect(() => { saveSettings({ model, streaming }) }, [model, streaming])
@@ -78,13 +115,31 @@ export function Chat() {
         }
     }, [input])
 
-    function reset() {
+    async function persistMessage(role: string, content: string) {
+        if (!sessionId) return
+        try {
+            await addChatMessage(sessionId, role, content)
+        } catch {
+            // Silently fail — message is still shown in UI
+        }
+    }
+
+    async function reset() {
         if (abortRef.current) abortRef.current()
         setMessages([])
         setInput("")
         setStreamingText("")
         setLoading(false)
-        localStorage.removeItem(STORAGE_KEY)
+
+        // Delete all sessions and create a fresh one
+        try {
+            await deleteAllChatSessions()
+            const newSession = await createChatSession()
+            setSessionId(newSession.id)
+            localStorage.setItem("unifyroute_active_session", newSession.id)
+        } catch {
+            // proceed even if backend unreachable
+        }
     }
 
     async function handleSend() {
@@ -97,6 +152,9 @@ export function Chat() {
         setInput("")
         setLoading(true)
         setStreamingText("")
+
+        // Persist user message to DB
+        persistMessage("user", text)
 
         // Build the messages array for the API (full conversation history)
         const apiMessages: ChatMessage[] = newMessages.map(m => ({
@@ -115,25 +173,30 @@ export function Chat() {
                     setStreamingText(accumulated)
                 },
                 (info) => {
+                    const assistantContent = accumulated
                     setMessages(prev => [
                         ...prev,
                         {
                             role: "assistant",
-                            content: accumulated,
+                            content: assistantContent,
                             model: info.model,
                             provider: info.provider,
                         },
                     ])
                     setStreamingText("")
                     setLoading(false)
+                    // Persist assistant message to DB
+                    persistMessage("assistant", assistantContent)
                 },
                 (err) => {
+                    const errContent = `⚠️ Error: ${err.message}`
                     setMessages(prev => [
                         ...prev,
-                        { role: "assistant", content: `⚠️ Error: ${err.message}` },
+                        { role: "assistant", content: errContent },
                     ])
                     setStreamingText("")
                     setLoading(false)
+                    persistMessage("assistant", errContent)
                 }
             )
             abortRef.current = abort
@@ -144,11 +207,12 @@ export function Chat() {
                 const res = await sendChatMessage(model, apiMessages)
                 const latency = Date.now() - startTime
                 const choice = res.choices?.[0]
+                const assistantContent = choice?.message?.content || "(empty response)"
                 setMessages(prev => [
                     ...prev,
                     {
                         role: "assistant",
-                        content: choice?.message?.content || "(empty response)",
+                        content: assistantContent,
                         model: res.model,
                         tokens: res.usage
                             ? { prompt: res.usage.prompt_tokens, completion: res.usage.completion_tokens }
@@ -156,11 +220,14 @@ export function Chat() {
                         latency,
                     },
                 ])
+                persistMessage("assistant", assistantContent)
             } catch (err: any) {
+                const errContent = `⚠️ Error: ${err.message}`
                 setMessages(prev => [
                     ...prev,
-                    { role: "assistant", content: `⚠️ Error: ${err.message}` },
+                    { role: "assistant", content: errContent },
                 ])
+                persistMessage("assistant", errContent)
             } finally {
                 setLoading(false)
             }
@@ -223,7 +290,12 @@ export function Chat() {
 
             {/* Message area */}
             <div className="flex-1 overflow-y-auto py-6 space-y-4">
-                {messages.length === 0 && !loading && (
+                {sessionLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-3">
+                        <Loader2 className="h-8 w-8 animate-spin text-orange-500/50" />
+                        <p className="text-sm">Loading chat session…</p>
+                    </div>
+                ) : messages.length === 0 && !loading ? (
                     <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-3">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500/10 to-orange-500/10 flex items-center justify-center">
                             <Bot className="h-8 w-8 text-orange-500/50" />
@@ -233,7 +305,7 @@ export function Chat() {
                             <p className="text-sm">Select a model and type your message below.</p>
                         </div>
                     </div>
-                )}
+                ) : null}
 
                 {messages.map((msg, i) => (
                     <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>

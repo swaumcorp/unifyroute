@@ -103,12 +103,15 @@ function ProviderModelManager({ providerId, providerModels, mutateModels }: { pr
                 return Promise.resolve()
             }))
 
+            // Clear selections before mutating to avoid stale state
             setSelection(prev => ({
                 ...prev,
                 lite: new Set(),
                 base: new Set(),
                 thinking: new Set()
             }))
+
+            // Refresh data to show models in "All Available"
             await mutateModels()
         } catch (e) {
             console.error("Failed to remove models", e)

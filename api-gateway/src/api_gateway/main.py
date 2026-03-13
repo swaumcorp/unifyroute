@@ -84,6 +84,8 @@ app.include_router(oauth_router)
 app.include_router(wizard_router)
 from api_gateway.routes.brain import router as brain_router
 app.include_router(brain_router)
+from api_gateway.routes.chat import router as chat_router
+app.include_router(chat_router)
 
 @app.get("/")
 async def root():
