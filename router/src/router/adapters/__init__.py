@@ -18,6 +18,7 @@ from .compat_adapters import (
     XAIAdapter,
     OpenRouterAdapter
 )
+from .ollama_adapter import OllamaAdapter
 
 # Registry
 adapters: Dict[str, ProviderAdapter] = {
@@ -38,9 +39,9 @@ adapters: Dict[str, ProviderAdapter] = {
     "deepseek": DeepSeekAdapter(),
     "cerebras": CerebrasAdapter(),
     "xai": XAIAdapter(),
-    # ── Providers using generic adapter with correct litellm prefix ──
     "nvidia": ProviderAdapter("nvidia", "nvidia_nim"),
-    "ollama": ProviderAdapter("ollama", "ollama"),
+    "ollama": OllamaAdapter(),
+    "ollama-cloud": OllamaAdapter(),
     "huggingface": ProviderAdapter("huggingface", "huggingface"),
     "vllm": ProviderAdapter("vllm", "hosted_vllm"),
     "litellm": ProviderAdapter("litellm", "openai"),  # LiteLLM proxy is OpenAI-compatible

@@ -92,9 +92,7 @@ class ProviderAdapter:
         api_base = None
         if hasattr(credential, "provider") and credential.provider:
             pname = credential.provider.name.upper()
-            if credential.provider.name == "ollama":
-                default_base = "https://ollama.com"
-            elif credential.provider.name == "zai":
+            if credential.provider.name == "zai":
                 default_base = "https://api.z.ai/api/paas/v4"
             else:
                 default_base = None
