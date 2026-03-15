@@ -39,12 +39,14 @@ PROVIDER_HEALTH_URLS: dict[str, str] = {
     "fireworks":    "https://api.fireworks.ai/inference/v1/models",
     "zai":          "https://api.z.ai/api/paas/v4/models",
     "ollama":       "https://ollama.com/v1/models",
+    "ollama-cloud": "https://ollama.com/v1/models",
     "nvidia":       "https://integrate.api.nvidia.com/v1/models",
     "deepseek":     "https://api.deepseek.com/v1/models",
     "perplexity":   "https://api.perplexity.ai/models",
     "cerebras":     "https://api.cerebras.ai/v1/models",
     "huggingface":  "https://huggingface.co/api/models",
     "xai":          "https://api.x.ai/v1/models",
+    "openrouter":   "https://openrouter.ai/api/v1/models",
 }
 
 # Providers that use a custom auth header (not Bearer token)

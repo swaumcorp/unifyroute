@@ -361,7 +361,7 @@ async def sync_provider_models(
 
     - Loads the first enabled credential for the provider
     - Calls adapter.list_models() which hits the provider's real /v1/models endpoint
-    - Inserts any new models (disabled by default, tier = unassigned)
+    - Inserts any new models (enabled by default, tier = unassigned)
     - Falls back to the built-in catalog if the live API is unavailable
     """
     from sqlalchemy.orm import selectinload
@@ -476,10 +476,14 @@ async def sync_provider_models(
             if catalog_tier and not existing_pm.tier:
                 existing_pm.tier = catalog_tier
                 changed = True
+            # Re-enable synced models (they may have been unselected before)
+            if not existing_pm.enabled:
+                existing_pm.enabled = True
+                changed = True
             if changed:
                 updated += 1
         else:
-            # New model — insert (disabled until admin enables it)
+            # New model — insert as enabled by default
             model_db = ProviderModel(
                 provider_id=id,
                 model_id=info.model_id,
@@ -490,7 +494,7 @@ async def sync_provider_models(
                 tier=catalog_tiers.get(info.model_id, ""),
                 supports_streaming=info.supports_streaming,
                 supports_functions=info.supports_functions,
-                enabled=False,
+                enabled=True,
             )
             session.add(model_db)
             inserted += 1
@@ -547,13 +551,21 @@ async def update_model(
 @router.delete("/models/{id}")
 async def delete_model(
     id: uuid.UUID,
+    permanent: bool = Query(False),
     key: GatewayKey = Depends(require_admin_key),
     session: AsyncSession = Depends(get_db_session)
 ):
-    stmt = delete(ProviderModel).where(ProviderModel.id == id)
+    stmt = select(ProviderModel).where(ProviderModel.id == id)
     result = await session.execute(stmt)
-    if result.rowcount == 0:
+    model = result.scalar_one_or_none()
+    if not model:
         raise HTTPException(status_code=404, detail="Model not found")
+        
+    if permanent:
+        await session.delete(model)
+    else:
+        model.enabled = False
+        
     await session.commit()
     return {"status": "success"}
 

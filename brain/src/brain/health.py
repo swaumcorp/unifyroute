@@ -32,10 +32,23 @@ async def check_endpoint(
     try:
         async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
             r = await client.get(url, headers=headers)
+        
         latency = int((time.monotonic() - start) * 1000)
-        ok = r.status_code < 400
-        msg = "OK" if ok else f"HTTP {r.status_code}"
-        return HealthResult(ok=ok, latency_ms=latency, status_code=r.status_code, message=msg)
+        
+        if r.status_code >= 400:
+            err_msg = ""
+            try:
+                # Attempt to parse json error
+                data = r.json()
+                err_msg = data.get("error", {}).get("message") or data.get("error") or r.text
+            except Exception:
+                err_msg = r.text
+            err_msg = str(err_msg).strip() or f"HTTP {r.status_code}"
+            
+            # Raise so it is caught below and passed through brain_safe_message
+            raise Exception(f"HTTP {r.status_code}: {err_msg}")
+            
+        return HealthResult(ok=True, latency_ms=latency, status_code=r.status_code, message="OK")
     except Exception as exc:
         latency = int((time.monotonic() - start) * 1000)
         return HealthResult(ok=False, latency_ms=latency, message=brain_safe_message(exc))
