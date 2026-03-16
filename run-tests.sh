@@ -64,7 +64,6 @@ run_unit() {
     echo "▶  Running unit tests (no server required)..."
     echo ""
     "$VENV_PYTHON" -m pytest \
-        tests/test_brain_health.py \
         tests/test_brain_importer.py \
         tests/test_brain_ranker.py \
         tests/test_brain_selector.py \
@@ -128,22 +127,20 @@ with open(".admin_token", "w") as f:
         tests/test_auth.py \
         tests/test_providers.py \
         tests/test_credentials.py \
-        tests/test_keys.py \
-        tests/test_key_reveal.py \
-        tests/test_key_update.py \
+        tests/test_gateway_keys.py \
         tests/test_admin_models.py \
         tests/test_models_endpoint.py \
-        tests/test_chat_completions.py \
+        tests/test_completions.py \
         tests/test_routing_config.py \
         tests/test_routing_tiers.py \
-        tests/test_brain_api.py \
+        tests/test_brain.py \
         tests/test_brain_ranker.py \
         tests/test_wizard_api.py \
         tests/test_gateway_health.py \
         tests/test_oauth_routes.py \
         tests/test_connection_security.py \
         tests/test_quota_pollers.py \
-        tests/test_sync_models.py \
+        tests/test_deepseek_sync.py \
         tests/test_fireworks.py \
         "${PYTEST_ARGS[@]+"${PYTEST_ARGS[@]}"}"
 }

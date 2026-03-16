@@ -22,20 +22,32 @@ logger = logging.getLogger("launcher")
 # Configure Uvicorn/FastAPI loggers to make sure output reaches stdout where unifying script captures it
 def _configure_loggers():
     import sys
+    import os
+    from logging.handlers import RotatingFileHandler
+    
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     formatter = logging.Formatter(log_format)
+    
+    # Console logger
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
+    
+    # File logger
+    os.makedirs("logs", exist_ok=True)
+    file_handler = RotatingFileHandler(
+        "logs/api.log", maxBytes=10485760, backupCount=5
+    )
+    file_handler.setFormatter(formatter)
     
     # Configure root logger and essential app loggers
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    root_logger.handlers = [console_handler]
+    root_logger.handlers = [console_handler, file_handler]
     
     for name in ["launcher", "api_gateway", "router", "shared", "credential_vault", "uvicorn", "uvicorn.error", "uvicorn.access", "litellm", "httpx"]:
         l = logging.getLogger(name)
         l.setLevel(logging.INFO)
-        l.handlers = [console_handler]
+        l.handlers = [console_handler, file_handler]
         l.propagate = False
 
 _configure_loggers()

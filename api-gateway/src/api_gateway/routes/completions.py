@@ -24,10 +24,26 @@ router = APIRouter(prefix="/v1", tags=["Completions"])
 
 async def log_request_bg_task(bg_data: dict):
     try:
+        import uuid
+        
+        cred_id = bg_data.get("credential_id")
+        if cred_id and isinstance(cred_id, str):
+            try:
+                cred_id = uuid.UUID(cred_id)
+            except ValueError:
+                cred_id = None
+                
+        client_key_id = bg_data.get("client_key_id")
+        if client_key_id and isinstance(client_key_id, str):
+            try:
+                client_key_id = uuid.UUID(client_key_id)
+            except ValueError:
+                client_key_id = None
+
         async with async_session_maker() as session:
             log_entry = RequestLog(
-                client_key_id=bg_data.get("client_key_id"),
-                credential_id=bg_data.get("credential_id"),
+                client_key_id=client_key_id,
+                credential_id=cred_id,
                 model_alias=bg_data.get("model_alias"),
                 actual_model=bg_data.get("actual_model"),
                 provider=bg_data.get("provider"),
