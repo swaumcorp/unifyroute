@@ -42,6 +42,7 @@ interface ModelEntry {
     modelId: string
     providerName: string
     providerDisplayName: string
+    tier: string
 }
 
 // ── Column config ─────────────────────────────────────────────────────────────
@@ -267,6 +268,7 @@ export function RoutingStrategy() {
                         modelId: m.model_id,
                         providerName: provider.name,
                         providerDisplayName: provider.display_name,
+                        tier: m.tier,
                     })
                 }
             })
@@ -449,15 +451,21 @@ export function RoutingStrategy() {
                             </Card>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                                {TIER_COLUMNS.map(col => (
-                                    <ModelColumn
-                                        key={col.key}
-                                        col={col}
-                                        allModels={availableModels}
-                                        selected={tierModels[col.key]}
-                                        onToggle={(id) => toggleModel(col.key, id)}
-                                    />
-                                ))}
+                                {TIER_COLUMNS.map(col => {
+                                    const filteredModels = col.key === "auto" 
+                                        ? availableModels 
+                                        : availableModels.filter(m => m.tier === col.key)
+
+                                    return (
+                                        <ModelColumn
+                                            key={col.key}
+                                            col={col}
+                                            allModels={filteredModels}
+                                            selected={tierModels[col.key]}
+                                            onToggle={(id) => toggleModel(col.key, id)}
+                                        />
+                                    )
+                                })}
                             </div>
                         )}
                     </div>
