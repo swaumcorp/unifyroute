@@ -415,7 +415,7 @@ export function ModelManagement() {
 
     const [search, setSearch] = useState("")
     const [filterProvider, setFilterProvider] = useState("all")
-    const [filterEnabled, setFilterEnabled] = useState<"all" | "enabled" | "disabled">("all")
+    const [filterEnabled, setFilterEnabled] = useState<"all" | "selected" | "unselected">("all")
     const [filterTier, setFilterTier] = useState("all")
 
     const [togglingId, setTogglingId] = useState<string | null>(null)
@@ -437,8 +437,8 @@ export function ModelManagement() {
         let list = [...models]
 
         if (filterProvider !== "all") list = list.filter((m) => m.provider_id === filterProvider)
-        if (filterEnabled === "enabled") list = list.filter((m) => m.enabled)
-        if (filterEnabled === "disabled") list = list.filter((m) => !m.enabled)
+        if (filterEnabled === "selected") list = list.filter((m) => m.enabled)
+        if (filterEnabled === "unselected") list = list.filter((m) => !m.enabled)
         if (filterTier !== "all") list = list.filter((m) => (m.tier ?? "") === (filterTier === "none" ? "" : filterTier))
         if (search.trim()) {
             const tokens = search.toLowerCase().split(/\s+/).filter(Boolean)
@@ -549,7 +549,7 @@ export function ModelManagement() {
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">Model Management</h2>
                         <p className="text-muted-foreground pt-0.5">
-                            Enable or disable models across all providers. Disabled models are hidden from the Provider Models page.
+                            Select or unselect models across all providers. Unselected models are hidden from the Provider Models page.
                         </p>
                     </div>
                 </div>
@@ -587,8 +587,8 @@ export function ModelManagement() {
             <div className="grid grid-cols-3 gap-4">
                 {[
                     { label: "Total Models", value: stats.total, color: "text-foreground" },
-                    { label: "Enabled", value: stats.enabled, color: "text-emerald-600 dark:text-emerald-400" },
-                    { label: "Disabled", value: stats.disabled, color: "text-slate-400" },
+                    { label: "Selected", value: stats.enabled, color: "text-emerald-600 dark:text-emerald-400" },
+                    { label: "Unselected", value: stats.disabled, color: "text-slate-400" },
                 ].map(({ label, value, color }) => (
                     <Card key={label} className="border">
                         <CardHeader className="pb-1 pt-4 px-5">
@@ -648,8 +648,8 @@ export function ModelManagement() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Status</SelectItem>
-                        <SelectItem value="enabled">Enabled</SelectItem>
-                        <SelectItem value="disabled">Disabled</SelectItem>
+                        <SelectItem value="selected">Selected</SelectItem>
+                        <SelectItem value="unselected">Unselected</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
@@ -682,7 +682,7 @@ export function ModelManagement() {
                                     <TableHead className="w-44">Provider</TableHead>
                                     <TableHead>Model ID</TableHead>
                                     <TableHead className="w-28">Tier</TableHead>
-                                    <TableHead className="w-24 text-center">Enabled</TableHead>
+                                    <TableHead className="w-24 text-center">Selected</TableHead>
                                     <TableHead className="w-16 text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>

@@ -12,7 +12,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: process.env.VITE_API_PROXY_TARGET || 'http://api-gateway:8000',
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:6565',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },

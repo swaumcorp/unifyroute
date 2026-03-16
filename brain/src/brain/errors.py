@@ -34,6 +34,11 @@ def brain_safe_message(exc: Exception) -> str:
         return "The requested provider endpoint was not found. The URL may be incorrect."
     if "ssl" in msg or "certificate" in msg:
         return "An SSL/TLS error occurred when contacting the provider."
+    if "name or service not known" in msg or "nodename nor servname provided" in msg or "errno -2" in msg or "errno 8" in msg:
+        return (
+            "Domain not reachable. Please verify the API Base URL is correct. "
+            "For custom endpoints, you must provide the correct API Base URL."
+        )
     # Fallback: sanitised first 200 chars
     raw = str(exc)
     return raw[:200] if len(raw) <= 200 else raw[:197] + "..."

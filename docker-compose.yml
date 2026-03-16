@@ -23,6 +23,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - MASTER_PASSWORD=${MASTER_PASSWORD:-admin}
       - JWT_SECRET=${JWT_SECRET:-supersecret123}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8000:8000"
     depends_on:
@@ -41,6 +43,8 @@ services:
       - SQLITE_PATH=${SQLITE_PATH:-data/unifyroute.db}
       - DB_BACKEND=sqlite
       - REDIS_URL=redis://redis:6379/0
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       redis:
         condition: service_healthy
@@ -57,6 +61,8 @@ services:
       - SQLITE_PATH=${SQLITE_PATH:-data/unifyroute.db}
       - DB_BACKEND=sqlite
       - VAULT_MASTER_KEY=${VAULT_MASTER_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8001:8001"
     volumes:
@@ -67,6 +73,8 @@ services:
       context: .
       dockerfile: Dockerfile.gui
     container_name: unifyroute_gui
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "3000:3000"
     depends_on:

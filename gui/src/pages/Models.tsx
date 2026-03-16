@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { RefreshCw, Server, Search, ChevronRight, ChevronLeft, Trash2, Plus } from "lucide-react"
-import { useModels, useProviders, syncProviderModels, updateModel, deleteModel } from "@/lib/api"
+import { useModels, useProviders, syncProviderModels, updateModel } from "@/lib/api"
 import { ErrorState } from "@/components/error-state"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
@@ -128,13 +128,13 @@ function ProviderModelManager({ providerId, providerModels, mutateModels }: { pr
         try {
             await Promise.all(selectedIds.map(id => {
                 const model = providerModels.find(m => m.model_id === id)
-                if (model) return deleteModel(model.id)
+                if (model) return updateModel(model.id, { enabled: false })
                 return Promise.resolve()
             }))
             setSelection(prev => ({ ...prev, available: new Set() }))
             await mutateModels()
         } catch (e) {
-            console.error("Failed to delete models", e)
+            console.error("Failed to unselect models", e)
         } finally {
             setIsUpdating(false)
         }
@@ -294,7 +294,7 @@ function ProviderModelManager({ providerId, providerModels, mutateModels }: { pr
                         onClick={deleteSelectedAvailable}
                         disabled={selection.available.size === 0 || isUpdating}
                     >
-                        <Trash2 className="h-3 w-3 mr-1" /> Delete
+                        <Trash2 className="h-3 w-3 mr-1" /> Unselect
                     </Button>
                     <div className="h-px bg-border my-2" />
                     <Button
@@ -396,10 +396,10 @@ export function Models() {
                                         {provider.display_name}
                                     </CardTitle>
                                     <CardDescription>
-                                        {providerModels.length} enabled model{providerModels.length !== 1 ? 's' : ''} cached locally.
+                                        {providerModels.length} selected model{providerModels.length !== 1 ? 's' : ''} cached locally.
                                         {disabledCount > 0 && (
                                             <span className="ml-1 text-muted-foreground/70">
-                                                ({disabledCount} disabled — manage in{' '}
+                                                ({disabledCount} unselected — restore in{' '}
                                                 <a href="/model-management" className="underline hover:text-foreground">Model Management</a>)
                                             </span>
                                         )}
@@ -430,7 +430,7 @@ export function Models() {
                                 ) : (
                                     <div className="text-center py-6 text-sm text-muted-foreground border rounded-md border-dashed">
                                         {allProviderModels.length > 0
-                                            ? `All ${allProviderModels.length} model${allProviderModels.length !== 1 ? 's' : ''} are disabled. Enable them in Model Management.`
+                                            ? `All ${allProviderModels.length} model${allProviderModels.length !== 1 ? 's' : ''} are unselected. Select them in Model Management.`
                                             : `No models synced yet. Click "Sync Models" to fetch from ${provider.display_name}.`
                                         }
                                     </div>
