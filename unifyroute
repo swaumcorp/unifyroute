@@ -488,6 +488,133 @@ def cmd_import_keys(sub: list[str]):
     _uv_run(["--package", "shared", "python", "scripts/import-keys.py", sub[0]])
 
 
+def cmd_doctor():
+    """Run diagnostics and attempt self-healing of common issues."""
+    import shutil
+    print("\n🩺  UnifyRoute Doctor — System Health Check\n")
+    print("  " + "═" * 50)
+
+    issues = 0
+    fixed = 0
+
+    # ── 1. Docker ─────────────────────────────────────────────────
+    print("\n  1. Docker Daemon")
+    docker = shutil.which("docker")
+    if not docker:
+        print("     ⚠️  Docker not found on PATH")
+        issues += 1
+    else:
+        result = subprocess.run([docker, "info"], capture_output=True, text=True)
+        if result.returncode != 0:
+            print("     ❌  Docker daemon is NOT running")
+            issues += 1
+            if sys.platform != "win32":
+                print("     🔧  Attempting to start Docker...")
+                start = subprocess.run(["sudo", "systemctl", "start", "docker"], capture_output=True, text=True)
+                if start.returncode == 0:
+                    print("     ✅  Docker daemon started")
+                    fixed += 1
+                else:
+                    print(f"     ❌  Failed: {start.stderr.strip()}")
+        else:
+            print("     ✅  Docker daemon is running")
+
+    # ── 2. Redis ──────────────────────────────────────────────────
+    print("\n  2. Redis Connectivity")
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    try:
+        import redis
+        r = redis.from_url(redis_url)
+        r.ping()
+        print(f"     ✅  Redis responding at {redis_url}")
+
+        # Check for stale failure keys
+        failed_keys = list(r.scan_iter(match="failed:*", count=100))
+        if failed_keys:
+            print(f"     ℹ️   {len(failed_keys)} provider(s) currently in cooldown")
+
+        # Check for open circuits
+        circuit_keys = list(r.scan_iter(match="circuit:*", count=100))
+        if circuit_keys:
+            print(f"     ⚠️  {len(circuit_keys)} circuit breaker(s) OPEN")
+            issues += len(circuit_keys)
+
+        # Check for cooldown counters
+        cooldown_keys = list(r.scan_iter(match="cooldown:count:*", count=100))
+        if cooldown_keys:
+            print(f"     ℹ️   {len(cooldown_keys)} provider(s) with active cooldown counters")
+
+    except ImportError:
+        print("     ⚠️  redis-py not installed — install with: pip install redis")
+        issues += 1
+    except Exception as e:
+        print(f"     ❌  Redis not reachable: {e}")
+        issues += 1
+        if docker:
+            print("     🔧  Attempting to start Redis via Docker...")
+            result = subprocess.run(
+                [docker, "compose", "up", "-d", "redis"],
+                cwd=str(SCRIPT_DIR), capture_output=True, text=True,
+            )
+            if result.returncode == 0:
+                print("     ✅  Redis container started")
+                fixed += 1
+            else:
+                print(f"     ❌  Failed: {result.stderr.strip()}")
+
+    # ── 3. Application Health ─────────────────────────────────────
+    print("\n  3. Application Health")
+    port = os.environ.get("PORT", "6565")
+    health_url = f"http://localhost:{port}/api/health"
+    try:
+        import urllib.request
+        import json as json_mod
+        resp = urllib.request.urlopen(health_url, timeout=5)
+        data = json_mod.loads(resp.read())
+        status = data.get("status", "unknown")
+        if status == "ok":
+            print(f"     ✅  API gateway healthy at :{port}")
+            sh = data.get("self_healing", {})
+            if isinstance(sh, dict):
+                incidents = sh.get("incidents", {})
+                health = sh.get("provider_health", {})
+                print(f"     ℹ️   Tracked incidents: {incidents.get('total_tracked', 0)}")
+                print(f"     ℹ️   Open circuits: {incidents.get('open_circuits', 0)}")
+                print(f"     ℹ️   Providers: {health.get('healthy', 0)} healthy, {health.get('unhealthy', 0)} unhealthy")
+        else:
+            print(f"     ⚠️  Status: {status}")
+    except Exception as e:
+        print(f"     ❌  API not reachable at :{port} — {e}")
+        issues += 1
+
+    # ── 4. Stale failure cleanup ──────────────────────────────────
+    print("\n  4. Self-Healing Status")
+    try:
+        import redis
+        r = redis.from_url(redis_url)
+        incident_keys = list(r.scan_iter(match="incidents:*", count=100))
+        total_incidents = 0
+        for key in incident_keys:
+            total_incidents += r.zcard(key)
+        print(f"     ℹ️   Active incident records: {total_incidents}")
+
+        health_keys = list(r.scan_iter(match="health:*", count=100))
+        print(f"     ℹ️   Health probe cache entries: {len(health_keys)}")
+    except Exception:
+        print("     ⚠️  Could not read self-healing data (Redis unavailable)")
+
+    # ── Summary ───────────────────────────────────────────────────
+    print("\n  " + "═" * 50)
+    if issues == 0:
+        print("  ✅  All checks passed. System is healthy.\n")
+    else:
+        print(f"  ⚠️  {issues} issue(s) found, {fixed} auto-fixed.")
+        if issues > fixed:
+            print(f"  ❌  {issues - fixed} issue(s) require manual attention.\n")
+        else:
+            print("  ✅  All issues resolved.\n")
+
+
 
 # ── Usage ──────────────────────────────────────────────────────────────────────
 
@@ -501,6 +628,7 @@ Commands:
   stop                                Stop the application
   restart                             Restart the application
   clean-start                         Stop everything, archive logs, start fresh
+  doctor                              Run diagnostics and auto-heal common issues
   get token [all|admin|api]           List API tokens (requires master password)
   create token [admin|api]            Create a new API token (requires master password)
   update token <id> <label>           Update a token's label (requires master password)
@@ -514,6 +642,7 @@ Examples:
   ./unifyroute setup uninstall        Clean up everything
   ./unifyroute start                  Start the app
   ./unifyroute clean-start            Stop stale processes, archive logs, start fresh
+  ./unifyroute doctor                 Check system health, auto-fix issues
   ./unifyroute get token              List all tokens
   ./unifyroute create token admin     Create an admin token
 """
@@ -549,6 +678,9 @@ def main():
 
     elif cmd in ("clean-start", "cleanstart"):
         cmd_cleanstart()
+
+    elif cmd == "doctor":
+        cmd_doctor()
 
     elif cmd == "get":
         if rest and rest[0] == "token":

@@ -14,7 +14,9 @@ from shared.models import GatewayKey, RequestLog
 from shared.schemas import ChatCompletionRequest, CompletionRequest
 from router.core import select_model, get_ranked_candidates
 from router.adapters import get_adapter
-from router.quota import mark_provider_failed
+from router.quota import mark_provider_failed, record_success
+from selfheal.incident_tracker import record_incident
+from selfheal.adaptive_cooldown import record_failure as adaptive_record_failure, reset_failure_count
 
 from api_gateway.auth import get_current_key
 
@@ -225,6 +227,10 @@ async def create_chat_completion(
                     "Chat completion success: provider=%s model=%s tokens=%d/%d latency=%dms",
                     provider_name, actual_model, prompt_tokens, completion_tokens, latency_ms,
                 )
+
+                # Self-heal: reset adaptive cooldown on success
+                await record_success(credential.id, actual_model)
+                await reset_failure_count(credential.id, actual_model)
                 
                 bg_data.update({
                     "completion_tokens": completion_tokens,
@@ -241,18 +247,22 @@ async def create_chat_completion(
                 return response
 
         except httpx.ReadError as e:
-            # Mark failed and try next
-            await mark_provider_failed(credential.id, actual_model)
+            # Self-heal: record incident + adaptive cooldown
+            ttl = await adaptive_record_failure(credential.id, actual_model)
+            await mark_provider_failed(credential.id, actual_model, timeout_seconds=ttl)
+            await record_incident(credential.id, actual_model, str(e), provider=provider_name)
             last_error = f"Connection error: {str(e)}"
-            logger.warning("Connection error with %s/%s, failing over: %s", provider_name, actual_model, e)
+            logger.warning("Connection error with %s/%s (cooldown %ds), failing over: %s", provider_name, actual_model, ttl, e)
             continue
         except Exception as e:
-            # Rate limits or auth errors
+            # Self-heal: record incident + adaptive cooldown for all errors
             error_str = str(e).lower()
-            if "rate limit" in error_str or "429" in error_str or "unauthorized" in error_str:
-                 await mark_provider_failed(credential.id, actual_model)
+            ttl = await adaptive_record_failure(credential.id, actual_model)
+            if "rate limit" in error_str or "429" in error_str or "unauthorized" in error_str or "timeout" in error_str or "connection" in error_str:
+                await mark_provider_failed(credential.id, actual_model, timeout_seconds=ttl)
+            await record_incident(credential.id, actual_model, str(e), provider=provider_name)
             last_error = str(e)
-            logger.warning("Error with %s/%s, failing over: %s", provider_name, actual_model, last_error)
+            logger.warning("Error with %s/%s (cooldown %ds), failing over: %s", provider_name, actual_model, ttl, last_error)
             continue
             
     # If we exhausted all candidates
@@ -399,16 +409,20 @@ async def create_completion(
                 return res_dict
 
         except httpx.ReadError as e:
-            await mark_provider_failed(credential.id, actual_model)
+            ttl = await adaptive_record_failure(credential.id, actual_model)
+            await mark_provider_failed(credential.id, actual_model, timeout_seconds=ttl)
+            await record_incident(credential.id, actual_model, str(e), provider=provider_name)
             last_error = f"Connection error: {str(e)}"
-            logger.warning("Text completion connection error with %s/%s: %s", provider_name, actual_model, e)
+            logger.warning("Text completion connection error with %s/%s (cooldown %ds): %s", provider_name, actual_model, ttl, e)
             continue
         except Exception as e:
             error_str = str(e).lower()
-            if "rate limit" in error_str or "429" in error_str or "unauthorized" in error_str:
-                 await mark_provider_failed(credential.id, actual_model)
+            ttl = await adaptive_record_failure(credential.id, actual_model)
+            if "rate limit" in error_str or "429" in error_str or "unauthorized" in error_str or "timeout" in error_str or "connection" in error_str:
+                await mark_provider_failed(credential.id, actual_model, timeout_seconds=ttl)
+            await record_incident(credential.id, actual_model, str(e), provider=provider_name)
             last_error = str(e)
-            logger.warning("Text completion error with %s/%s: %s", provider_name, actual_model, last_error)
+            logger.warning("Text completion error with %s/%s (cooldown %ds): %s", provider_name, actual_model, ttl, last_error)
             continue
             
     # If we exhausted all candidates

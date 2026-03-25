@@ -56,6 +56,29 @@ async def lifespan(app: FastAPI):
 
     logger.info("UnifyRoute startup complete.")
 
+    # Self-healing: run initial health probe on startup
+    try:
+        from selfheal.health_prober import probe_all_providers
+        logger.info("Running initial provider health probe...")
+        probe_result = await probe_all_providers()
+        logger.info(
+            "Initial health probe: %d healthy, %d unhealthy out of %d providers",
+            probe_result.get("healthy", 0),
+            probe_result.get("unhealthy", 0),
+            probe_result.get("total", 0),
+        )
+    except Exception as e:
+        logger.warning("Initial health probe skipped: %s", e)
+
+    # Self-healing: verify Redis connectivity
+    try:
+        from router.quota import get_redis
+        r = get_redis()
+        await r.ping()
+        logger.info("Redis connectivity verified.")
+    except Exception as e:
+        logger.warning("Redis not reachable — self-healing features may be limited: %s", e)
+
     yield
     # Shutdown the unified scheduler
     shutdown_scheduler(scheduler)
